@@ -1,0 +1,14 @@
+<resources>
+    <style name="Base.Theme.Voltify" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="colorPrimary">@color/voltify_bright_blue</item>
+        <item name="colorSecondary">@color/voltify_cyan</item>
+        <item name="colorSurface">@color/voltify_panel</item>
+        <item name="colorOnSurface">@color/voltify_text_primary</item>
+        <item name="android:navigationBarColor">@color/voltify_bg_deep</item>
+        <item name="android:statusBarColor">@color/voltify_bg_deep</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/voltify_bg_deep</item>
+    </style>
+    <style name="Theme.Voltify" parent="Base.Theme.Voltify" />
+</resources>

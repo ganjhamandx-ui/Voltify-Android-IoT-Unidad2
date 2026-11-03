@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_voltify_screen">
+  <ScrollView android:layout_width="0dp" android:layout_height="0dp" android:id="@+id/scrollContent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="34dp" android:layout_height="42dp" android:src="@drawable/ic_voltify_bolt" android:contentDescription="@string/app_name"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="@string/app_name" android:textColor="@color/voltify_text_primary" android:textSize="27sp" android:textStyle="bold"/>
+        </LinearLayout>
+        <TextView android:id="@+id/tvFechaReporte" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/voltify_cyan" android:textSize="12sp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/reports" android:textColor="@color/voltify_text_primary" android:textSize="25sp" android:textStyle="bold"/>
+
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnHoy" android:text="@string/period_day" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnSemana" android:text="@string/period_week" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnMes" android:text="@string/period_month" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnTresMeses" android:text="@string/period_3months" android:layout_width="wrap_content" android:layout_height="48dp"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:id="@+id/tvPeriodo" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_secondary"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/consumo" android:textColor="@color/voltify_text_muted"/>
+            <TextView android:id="@+id/tvConsumo" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textSize="20sp" android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/costo_energetico" android:textColor="@color/voltify_text_muted"/>
+            <TextView android:id="@+id/tvEnergia" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_cyan"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/cargo_fijo_aplicado" android:textColor="@color/voltify_text_muted"/>
+            <TextView android:id="@+id/tvFijo" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/costo_total_estimado" android:textColor="@color/voltify_text_muted"/>
+            <TextView android:id="@+id/tvTotal" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textSize="19sp" android:textStyle="bold"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/comparacion_del_periodo" android:textColor="@color/voltify_text_primary" android:textSize="16sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvComparacionReporte" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/voltify_text_secondary"/>
+            <com.example.voltify.VoltifyBarChartView android:id="@+id/chartComparacionReporte" android:layout_width="match_parent" android:layout_height="170dp" android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/tendencia_de_consumo" android:textColor="@color/voltify_text_primary" android:textSize="16sp" android:textStyle="bold"/>
+            <com.example.voltify.VoltifyBarChartView android:id="@+id/chartTendenciaReporte" android:layout_width="match_parent" android:layout_height="190dp" android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/artefactos_con_mayor_consumo" android:textColor="@color/voltify_text_primary" android:textStyle="bold"/>
+        <LinearLayout android:id="@+id/llRanking" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp"/>
+        <Button android:id="@+id/btnGenerar" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="12dp" android:background="@drawable/bg_button_primary" android:backgroundTint="@null" android:text="@string/generar_compartir_reporte" android:textAllCaps="false" android:textColor="@color/voltify_text_primary"/>
+        <Button android:id="@+id/btnVolver" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:background="@drawable/bg_button_outline" android:backgroundTint="@null" android:text="@string/back" android:textAllCaps="false" android:textColor="@color/voltify_bright_blue"/>
+    </LinearLayout>
+</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

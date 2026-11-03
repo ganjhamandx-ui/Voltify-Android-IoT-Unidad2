@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_voltify_screen">
+  <ScrollView android:layout_width="0dp" android:layout_height="0dp" android:fillViewport="true" android:id="@+id/scrollContent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="34dp" android:layout_height="42dp" android:contentDescription="@string/app_name" android:src="@drawable/ic_voltify_bolt"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="@string/app_name" android:textColor="@color/voltify_text_primary" android:textSize="27sp" android:textStyle="bold"/>
+        </LinearLayout>
+
+        <TextView android:id="@+id/tvFechaChile" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/voltify_cyan" android:textSize="12sp"/>
+
+        <TextView android:id="@+id/tvHello" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/hola" android:textColor="@color/voltify_text_primary" android:textSize="27sp" android:textStyle="bold"/>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/dashboard_sub" android:textColor="@color/voltify_text_secondary"/>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/total_consumption" android:textColor="@color/voltify_text_secondary"/>
+                <TextView android:id="@+id/tvConsumo" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textSize="22sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <Space android:layout_width="8dp" android:layout_height="1dp"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/estimated_cost" android:textColor="@color/voltify_text_secondary"/>
+                <TextView android:id="@+id/tvCosto" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textSize="20sp" android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/active_devices" android:textColor="@color/voltify_text_secondary"/>
+                <TextView android:id="@+id/tvActivos" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textSize="20sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <Space android:layout_width="8dp" android:layout_height="1dp"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/goal_progress" android:textColor="@color/voltify_text_secondary"/>
+                <TextView android:id="@+id/tvMeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textSize="20sp" android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/monitoring_multiple_title" android:textColor="@color/voltify_text_secondary"/>
+            <TextView android:id="@+id/tvMonitorNombre" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/voltify_text_primary" android:textSize="18sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvMonitorEstado" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/voltify_success" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvMonitorValor" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:textColor="@color/voltify_text_secondary"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/comparacion_del_mes" android:textColor="@color/voltify_text_primary" android:textSize="16sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvComparacionDashboard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/voltify_text_secondary"/>
+            <com.example.voltify.VoltifyBarChartView android:id="@+id/chartDashboard" android:layout_width="match_parent" android:layout_height="160dp" android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="@string/quick_access" android:textColor="@color/voltify_text_primary" android:textSize="17sp" android:textStyle="bold"/>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btnArtefactos" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1" android:layout_margin="4dp" android:text="@string/devices" android:textAllCaps="false"/>
+            <Button android:id="@+id/btnConsumos" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1" android:layout_margin="4dp" android:text="@string/consumptions" android:textAllCaps="false"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btnMetas" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1" android:layout_margin="4dp" android:text="@string/goals" android:textAllCaps="false"/>
+            <Button android:id="@+id/btnConsejos" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1" android:layout_margin="4dp" android:text="@string/tips" android:textAllCaps="false"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btnReportes" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1" android:layout_margin="4dp" android:text="@string/reports" android:textAllCaps="false"/>
+            <Button android:id="@+id/btnConfiguracion" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1" android:layout_margin="4dp" android:text="@string/settings" android:textAllCaps="false"/>
+        </LinearLayout>
+
+        <Button android:id="@+id/btnCerrarSesionDashboard" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="10dp" android:background="@drawable/bg_button_outline" android:backgroundTint="@null" android:text="@string/logout" android:textAllCaps="false" android:textColor="@color/voltify_danger"/>
+    </LinearLayout>
+</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,22 @@
+<resources>
+    <color name="voltify_bg_deep">#020611</color>
+    <color name="voltify_bg_primary">#040916</color>
+    <color name="voltify_bg_secondary">#07101F</color>
+    <color name="voltify_panel">#071326</color>
+    <color name="voltify_panel_light">#0A1830</color>
+    <color name="voltify_border">#4D89FF</color>
+    <color name="voltify_blue">#2878FF</color>
+    <color name="voltify_bright_blue">#438CFF</color>
+    <color name="voltify_neon_blue">#5AA2FF</color>
+    <color name="voltify_cyan">#31D7FF</color>
+    <color name="voltify_success">#49E5C2</color>
+    <color name="voltify_warning">#F3A536</color>
+    <color name="voltify_danger">#EF493D</color>
+    <color name="voltify_purple">#B578F2</color>
+    <color name="voltify_orange">#FF7A45</color>
+    <color name="voltify_pink">#F46FD2</color>
+    <color name="voltify_text_primary">#F4F7FF</color>
+    <color name="voltify_text_secondary">#9BA9C3</color>
+    <color name="voltify_text_muted">#60708D</color>
+    <color name="voltify_transparent">#00000000</color>
+</resources>

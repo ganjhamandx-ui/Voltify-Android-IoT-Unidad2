@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_voltify_screen">
+  <ScrollView android:layout_width="0dp" android:layout_height="0dp" android:id="@+id/scrollContent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="34dp" android:layout_height="42dp" android:src="@drawable/ic_voltify_bolt" android:contentDescription="@string/app_name"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="@string/app_name" android:textColor="@color/voltify_text_primary" android:textSize="27sp" android:textStyle="bold"/>
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/history_title" android:textColor="@color/voltify_text_primary" android:textSize="25sp" android:textStyle="bold"/>
+
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnHoy" android:text="@string/period_day" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnSemana" android:text="@string/period_week" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnMes" android:text="@string/period_month" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnTresMeses" android:text="@string/period_3months" android:layout_width="wrap_content" android:layout_height="48dp"/>
+                <Button android:id="@+id/btnTodos" android:text="@string/todos" android:layout_width="wrap_content" android:layout_height="48dp"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+            <EditText android:id="@+id/etBuscar" android:layout_width="0dp" android:layout_height="50dp" android:layout_weight="1" android:background="@drawable/bg_input" android:hint="@string/buscar_artefacto" android:textColor="@color/voltify_text_primary" android:textColorHint="@color/voltify_text_muted"/>
+            <Button android:id="@+id/btnBuscar" android:layout_width="96dp" android:layout_height="50dp" android:layout_marginStart="6dp" android:text="@string/buscar" android:textAllCaps="false" android:textSize="13sp" android:singleLine="true" android:ellipsize="end"/>
+        </LinearLayout>
+
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnEstadoTodos" android:text="@string/todos" android:layout_width="wrap_content" android:layout_height="44dp" android:textAllCaps="false"/>
+                <Button android:id="@+id/btnEstadoActivos" android:text="@string/activos" android:layout_width="wrap_content" android:layout_height="44dp" android:textAllCaps="false"/>
+                <Button android:id="@+id/btnEstadoRetirados" android:text="@string/retirados" android:layout_width="wrap_content" android:layout_height="44dp" android:textAllCaps="false"/>
+                <Button android:id="@+id/btnEstadoEliminados" android:text="@string/deleted" android:layout_width="wrap_content" android:layout_height="44dp" android:textAllCaps="false"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout android:id="@+id/llHistorial" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:id="@+id/tvPeriodo" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_secondary"/>
+            <TextView android:id="@+id/tvTotalKwh" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_cyan" android:textSize="24sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvCosto" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/voltify_text_primary" android:textStyle="bold"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/comparacion_de_periodos" android:textColor="@color/voltify_text_primary" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvComparacionHistorial" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/voltify_text_secondary"/>
+            <com.example.voltify.VoltifyBarChartView android:id="@+id/chartComparacionHistorial" android:layout_width="match_parent" android:layout_height="160dp" android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/tendencia_del_periodo" android:textColor="@color/voltify_text_primary" android:textStyle="bold"/>
+            <AutoCompleteTextView android:id="@+id/acGraficaArtefacto" android:layout_width="match_parent" android:layout_height="50dp" android:layout_marginTop="8dp" android:background="@drawable/bg_input" android:hint="@string/graph_artifact" android:inputType="none" android:textColor="@color/voltify_text_primary" android:textColorHint="@color/voltify_text_muted"/>
+            <TextView android:id="@+id/tvTrendSource" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/voltify_cyan" android:textSize="12sp"/>
+            <com.example.voltify.VoltifyBarChartView android:id="@+id/chartTendenciaHistorial" android:layout_width="match_parent" android:layout_height="180dp" android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_panel" android:orientation="vertical" android:padding="14dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/compare_devices" android:textColor="@color/voltify_text_primary" android:textStyle="bold"/>
+            <AutoCompleteTextView android:id="@+id/acCompararA" android:layout_width="match_parent" android:layout_height="50dp" android:layout_marginTop="8dp" android:background="@drawable/bg_input" android:hint="@string/device_a" android:inputType="none" android:textColor="@color/voltify_text_primary" android:textColorHint="@color/voltify_text_muted"/>
+            <AutoCompleteTextView android:id="@+id/acCompararB" android:layout_width="match_parent" android:layout_height="50dp" android:layout_marginTop="8dp" android:background="@drawable/bg_input" android:hint="@string/device_b" android:inputType="none" android:textColor="@color/voltify_text_primary" android:textColorHint="@color/voltify_text_muted"/>
+            <Button android:id="@+id/btnCompararArtefactos" android:layout_width="match_parent" android:layout_height="50dp" android:layout_marginTop="8dp" android:text="@string/compare" android:textAllCaps="false"/>
+            <TextView android:id="@+id/tvComparacionArtefactos" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/comparison_select_two" android:textColor="@color/voltify_text_secondary"/>
+            <com.example.voltify.VoltifyComparisonChartView android:id="@+id/chartComparacionArtefactos" android:layout_width="match_parent" android:layout_height="210dp" android:layout_marginTop="8dp"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/comparison_energy_note" android:textColor="@color/voltify_text_muted" android:textSize="11sp"/>
+        </LinearLayout>
+
+        <Button android:id="@+id/btnVolver" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="12dp" android:background="@drawable/bg_button_outline" android:backgroundTint="@null" android:text="@string/back" android:textAllCaps="false" android:textColor="@color/voltify_bright_blue"/>
+    </LinearLayout>
+</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

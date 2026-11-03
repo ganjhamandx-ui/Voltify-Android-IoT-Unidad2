@@ -1,0 +1,73 @@
+
+COMPATIBILIDAD RABBIT 1 / KOTLIN
+- Firebase Android BoM: 34.8.0
+- firebase-auth: 24.0.1 (resuelto por BoM)
+- firebase-database: 22.0.1 (resuelto por BoM)
+- Google Services plugin: 4.5.0
+- Esta combinación evita firebase-auth 25.0.0, cuya metadata Kotlin 2.4 no es compatible con el compilador Kotlin 2.2 usado actualmente por el proyecto.
+
+VOLTIFY - CONFIGURACION FIREBASE Y SEGURIDAD
+============================================
+
+Este proyecto ya está preparado para funcionar en dos modos SIN cambiar el código:
+
+1) MODO LOCAL SEGURO (formativa)
+   - Sin google-services.json.
+   - Cuentas aisladas por correo.
+   - Una cuenta nueva parte sin artefactos, sin consumos y sin meta.
+   - Contraseñas: nunca se guardan en texto plano.
+   - Hash local: PBKDF2 con salt aleatorio y 210.000 iteraciones.
+   - Datos locales: cifrados con AES-GCM y clave protegida por Android Keystore.
+   - Recuperación local de demostración: código aleatorio de 6 dígitos, 10 minutos, máximo 5 intentos y enfriamiento de 60 segundos. El código NO se muestra en la UI; solo se registra en ADB/Logcat durante builds DEBUG para uso del desarrollador. El cambio de contraseña exige que el código haya sido verificado. En producción la recuperación debe realizarse mediante Firebase Authentication/correo.
+   - Bloqueo progresivo tras intentos fallidos de login.
+   - Backup Android deshabilitado y tráfico HTTP claro bloqueado.
+
+2) MODO FIREBASE (sumativa / demostración entre equipos)
+   - Crear proyecto Firebase.
+   - Registrar Android package: cl.voltify.app (applicationId). El namespace Kotlin sigue siendo com.example.voltify.
+   - Descargar google-services.json SIN renombrarlo y copiarlo en app/google-services.json.
+   - Al volver a sincronizar Gradle, el plugin Google Services se aplica automáticamente.
+   - Habilitar Authentication > Email/Password.
+   - Authentication > Settings > Password policy:
+       * Require
+       * Minimum length: 12
+       * Require lowercase
+       * Require uppercase
+       * Require numeric
+       * Require non-alphanumeric
+       * Mantener Email enumeration protection habilitada.
+   - Crear Realtime Database.
+   - Copiar firebase_database_rules.json en la pestaña Rules y publicar.
+
+REGLAS DE IDENTIDAD
+-------------------
+- Firebase Authentication administra credenciales; Realtime Database NO guarda passwords.
+- La app exige verificación de correo antes de permitir el acceso remoto completo.
+- Los datos quedan bajo /users/{uid}/ y las reglas solo permiten al propietario leer/escribir.
+- El perfil puede crearse durante el registro; artefactos, consumos y metas exigen email verificado.
+- Cambiar el correo no se permite desde Configuración: requiere un flujo de reautenticación específico.
+
+ESTRUCTURA REMOTA
+-----------------
+/users/{uid}/profile
+/users/{uid}/artifacts/{artifactId}
+/users/{uid}/consumptions/{consumptionId}
+/users/{uid}/meta
+
+IMPORTANTE
+----------
+- Para la formativa NO se inventan lecturas IOT_REAL. La fuente SIMULADA cambia dinámicamente.
+- Para la sumativa, al agregar Firebase se sincronizan las mismas entidades por UID.
+- Para la evaluación posterior con hardware, IotConsumptionBridge sigue siendo la entrada de lecturas INA219/ESP8266.
+
+
+ACTUALIZACION 12.3 - VALIDACION PARA SUMATIVA 2
+-------------------------------------------------
+- Identificador instalado único: cl.voltify.app. Namespace del código: com.example.voltify.
+- La política de complejidad se aplica al registro y cambio de contraseña; en login se validan las credenciales existentes.
+- Firebase RTDB tiene persistencia de datos y escrituras pendientes en disco.
+- Los consumos simulados comparten ID por artefacto y bloque de 30 s; la combinación utiliza el máximo acumulado, nunca suma dos teléfonos.
+- Las reglas incluidas en firebase_database_rules.json fueron endurecidas para escrituras específicas. Su presencia en el ZIP NO implica que estén publicadas en Firebase. Respaldar las reglas vigentes antes de reemplazarlas y probar en consola.
+- Los datos tariff son estimaciones locales hasta integrar API oficial, no precios certificados ni actualizados.
+- Las transacciones Firebase de consumos simulados son seguras ante colisiones online, pero las transacciones iniciadas sin conexión NO se conservan al reiniciar la aplicación: durante una prueba offline detener el monitoreo antes de cortar la red.
+- La app no incorpora aún lecturas físicas del Arduino, INA219 o ESP8266.

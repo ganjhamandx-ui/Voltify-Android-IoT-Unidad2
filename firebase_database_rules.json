@@ -1,0 +1,35 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && auth.token.email_verified === true",
+        "profile": {
+          ".write": "auth != null && auth.uid === $uid && (auth.token.email_verified === true || !data.exists())",
+          ".validate": "newData.hasChildren(['nombre','correo','telefono','comuna','empresa','usarTarifaManual']) && newData.child('nombre').isString() && newData.child('nombre').val().length >= 3 && newData.child('nombre').val().length <= 100 && newData.child('correo').isString() && newData.child('correo').val() === auth.token.email && newData.child('telefono').isString() && newData.child('telefono').val().length <= 30 && newData.child('comuna').isString() && newData.child('comuna').val().length <= 80 && newData.child('empresa').isString() && newData.child('empresa').val().length <= 100 && newData.child('usarTarifaManual').isBoolean()"
+        },
+        "artifacts": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id','nombre','categoria','marca','modelo','potenciaW','activo','monitoreando','fechaRegistro','tipoFuente']) && newData.child('id').isNumber() && newData.child('nombre').isString() && newData.child('nombre').val().length > 0 && newData.child('nombre').val().length <= 100 && newData.child('categoria').isString() && newData.child('marca').isString() && newData.child('modelo').isString() && newData.child('potenciaW').isNumber() && newData.child('potenciaW').val() > 0 && newData.child('potenciaW').val() <= 50000 && newData.child('activo').isBoolean() && newData.child('monitoreando').isBoolean() && newData.child('fechaRegistro').isNumber() && (newData.child('tipoFuente').val() === 'SIMULADA' || newData.child('tipoFuente').val() === 'IOT_REAL')",
+            ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+          }
+        },
+        "consumptions": {
+          "$id": {
+            ".validate": "newData.hasChildren(['id','artefactoId','artefactoNombre','artefactoCategoria','artefactoMarca','artefactoModelo','consumoKwh','fecha','tipoFuente']) && newData.child('id').isNumber() && newData.child('artefactoId').isNumber() && newData.child('artefactoNombre').isString() && newData.child('consumoKwh').isNumber() && newData.child('consumoKwh').val() >= 0 && newData.child('consumoKwh').val() <= 100000 && newData.child('fecha').isNumber() && (newData.child('tipoFuente').val() === 'SIMULADA' || newData.child('tipoFuente').val() === 'IOT_REAL')",
+            ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+          }
+        },
+        "meta": {
+          ".validate": "!newData.exists() || ((newData.child('consumoKwh').val() == null || (newData.child('consumoKwh').isNumber() && newData.child('consumoKwh').val() > 0)) && (newData.child('costoClp').val() == null || (newData.child('costoClp').isNumber() && newData.child('costoClp').val() > 0)))",
+          ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+        },
+        "$other": {
+          ".validate": false,
+          ".write": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+VOLTIFY 12.3 - CODIGO FUENTE CORREGIDO (V12.2 PRESERVADA)
+============================================================
+
+OBJETIVO: Mantener todas las funciones probadas en V12.2 con correcciones puntuales.
+
+CAMBIOS:
+1. LOGIN: no exige cambiar una contraseña válida por su complejidad. Reglas de contraseña siguen en registro/cambio. Botón Ingresar protegido ante doble pulsación.
+2. SINCRONIZACION: Firebase Authentication y RTDB, mismas rutas y proyecto Firebase existentes. Persistencia RTDB en disco para lecturas/escrituras pendientes.
+3. CONCURRENCIA: IDs numéricos distribuidos para altas nuevas; simulaciones consolidadas por ID de artefacto y bloque de 30 s, con actualización por transacción que retiene la mayor contribución, evitando sumar dos pantallas.
+4. UI: botón Buscar sin salto de línea. Mensajes distinguen simulación y tarifas locales no oficiales.
+5. SEGURIDAD: reglas RTDB propuestas más restrictivas (en archivo de reglas), NO publicadas automáticamente.
+6. IDENTIDAD: applicationId cl.voltify.app, versionName 12.3 / versionCode 15. Namespace Kotlin com.example.voltify (no es segundo APK).
+
+INSTALACION:
+- Haz copia del ZIP V12.2 y NO desinstales Voltify de Samsung.
+- Descomprime el ZIP V12.3; Android Studio: File > Open > carpeta Voltify_Android_V12_3.
+- Sync Gradle, Build > Make Project. Revisa todos los errores antes de instalar.
+- En el emulador, limpia exclusivamente el paquete viejo com.example.voltify si permanece instalado; NO borres cl.voltify.app.
+- Desde PowerShell con el emulador activo:
+  $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+  & $adb -s emulator-5554 shell pm list packages | findstr voltify
+  & $adb -s emulator-5554 uninstall com.example.voltify
+  & $adb -s emulator-5554 shell pm list packages | findstr voltify
+  (Si informa Unknown package, la versión antigua ya no estaba instalada.)
+- Para instalar desde Android Studio: seleccionar Medium Phone API 37 y Run. Se actualiza el mismo cl.voltify.app.
+- Si una pantalla de inicio todavía muestra múltiples accesos directos al mismo paquete, retirarlos de la pantalla principal (no borrar datos de la app).
+
+COMPROBACION NECESARIA ANTES DE USAR EN LA EVALUACION:
+- Android Studio: Build successful y versión 12.3 instalada (adb dumpsys package cl.voltify.app).
+- Login con credenciales válidas e inválidas.
+- Mismo UID y dos artefactos previos intactos en Firebase y ambos Android.
+- Monitor de un artefacto desde Samsung y visualización desde emulador, con nueva lectura en RTDB.
+- CRUD con artefacto temporal si es necesario; NO eliminar TV ni lámpara reales de pruebas.
+- Desconectar/reconectar con ambos monitoreos detenidos.
+- Verificar que gráficos, metas, reportes y configuración naveguen sin cierre.
+
+LIMITES Y PRECAUCIONES:
+- No hay APK binaria comprobada incluida: compilarla en Android Studio con tu SDK instalado.
+- No se ha accedido ni cambiado a tu base de datos remota desde este paquete.
+- Las reglas JSON deben aplicarse manualmente SOLO si se han respaldado y verificado.
+- Las transacciones RTDB no persisten entre reinicios mientras estén pendientes offline, incluso con persistencia activada.
+- La integración de API de tarifas oficiales y sensor IoT real queda para futuras unidades.
+- El código se revisó estáticamente y las utilidades Kotlin puras se probaron fuera de Android; el build Android y la prueba en Samsung/emulador aún deben ejecutarse en tu PC.
