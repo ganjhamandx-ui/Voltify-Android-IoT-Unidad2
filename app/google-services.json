@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "838926453214",
+    "project_id": "voltify-e51f9",
+    "storage_bucket": "voltify-e51f9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838926453214:android:f220d82323715e0343754f",
+        "android_client_info": {
+          "package_name": "cl.voltify.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDb4mD8pw4FSjreQVhYe48Nov6m2wJcao4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
