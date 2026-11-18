@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.voltify.data.local.PasswordSecurity
 import com.example.voltify.data.local.VoltifyLocalDataSource
 import com.example.voltify.data.remote.FirebaseGateway
+import com.example.voltify.data.remote.FirestoreGateway
 import com.example.voltify.model.ArtefactoLocal
 import com.example.voltify.model.AuthOutcome
 import com.example.voltify.model.AuthStatus
@@ -36,6 +37,8 @@ class HybridVoltifyRepository(
 ) : VoltifyRepository by local {
     private val appContext = context.applicationContext
     private val gateway = FirebaseGateway(appContext)
+    private val firestore = FirestoreGateway()
+    private val firestoreMutex = Mutex()
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val cloudMutex = Mutex()
     @Volatile private var artifactWritePending = 0
@@ -144,6 +147,7 @@ class HybridVoltifyRepository(
                 gateway.uploadProfile(uid, profile)
             }
             startCloudListener(uid)
+            syncFirestoreSnapshot(uid, profile, remote.artifacts)
             AuthOutcome(AuthStatus.SUCCESS)
         } catch (_: FirebaseGateway.EmailNotVerifiedException) {
             AuthOutcome(AuthStatus.EMAIL_NOT_VERIFIED, "Verifica tu correo antes de ingresar")
@@ -262,7 +266,14 @@ class HybridVoltifyRepository(
 
     override fun deleteArtifactPermanently(id: Int) {
         local.deleteArtifactPermanently(id)
-        withArtifactWrite { uid -> gateway.deleteArtifact(uid, id) }
+        withArtifactWrite { uid ->
+            gateway.deleteArtifact(uid, id)
+            try {
+                firestoreMutex.withLock { firestore.deleteDevice(uid, id) }
+            } catch (e: Exception) {
+                Log.e("VoltifyFirestore", "No se pudo eliminar el metadato del artefacto $id", e)
+            }
+        }
     }
 
     override fun setMonitoring(id: Int, enabled: Boolean) {
@@ -303,7 +314,14 @@ class HybridVoltifyRepository(
         local.purgeExpiredRetiredArtifacts()
         val after = local.getArtifacts(true).map { it.id }.toSet()
         (before - after).forEach { id ->
-            withArtifactWrite { uid -> gateway.deleteArtifact(uid, id) }
+            withArtifactWrite { uid ->
+                gateway.deleteArtifact(uid, id)
+                try {
+                    firestoreMutex.withLock { firestore.deleteDevice(uid, id) }
+                } catch (e: Exception) {
+                    Log.e("VoltifyFirestore", "No se pudo eliminar el metadato caducado $id", e)
+                }
+            }
         }
     }
 
@@ -317,8 +335,42 @@ class HybridVoltifyRepository(
         syncMeta()
     }
 
-    private fun syncProfile() = withUid { uid -> gateway.uploadProfile(uid, local.getUser()) }
-    private fun syncArtifact(artifact: ArtefactoLocal) = withArtifactWrite { uid -> gateway.uploadArtifact(uid, artifact) }
+    /** Refleja perfiles y metadatos desde RTDB a Firestore, sin leer ni reemplazar registros RTDB. */
+    private fun syncFirestoreSnapshot(uid: String, profile: UsuarioLocal, artifacts: List<ArtefactoLocal>) {
+        ioScope.launch {
+            try {
+                firestoreMutex.withLock {
+                    if (gateway.currentUid() != uid) return@withLock
+                    firestore.saveProfile(uid, profile)
+                    for (artifact in artifacts) {
+                        if (gateway.currentUid() != uid) return@withLock
+                        firestore.saveDevice(uid, artifact)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("VoltifyFirestore", "No fue posible completar la copia de metadatos", e)
+            }
+        }
+    }
+
+    private fun syncProfile() = withUid { uid ->
+        val profile = local.getUser()
+        gateway.uploadProfile(uid, profile)
+        try {
+            firestoreMutex.withLock { firestore.saveProfile(uid, profile) }
+        } catch (e: Exception) {
+            Log.e("VoltifyFirestore", "No se pudo actualizar el perfil", e)
+        }
+    }
+
+    private fun syncArtifact(artifact: ArtefactoLocal) = withArtifactWrite { uid ->
+        gateway.uploadArtifact(uid, artifact)
+        try {
+            firestoreMutex.withLock { firestore.saveDevice(uid, artifact) }
+        } catch (e: Exception) {
+            Log.e("VoltifyFirestore", "No se pudo actualizar el artefacto ${artifact.id}", e)
+        }
+    }
     private fun withArtifactWrite(block: suspend (String) -> Unit) {
         if (!gateway.isConfigured()) return
         val uid = gateway.currentUid() ?: return
