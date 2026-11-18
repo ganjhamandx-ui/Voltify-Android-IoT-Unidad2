@@ -1,0 +1,23 @@
+﻿rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Solo el propietario autenticado y verificado.
+    function esPropietario(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true;
+    }
+
+    // Perfil del usuario.
+    match /users/{uid} {
+      allow read, write: if esPropietario(uid);
+
+      // Dispositivos asociados al propietario.
+      match /devices/{deviceId} {
+        allow read, write: if esPropietario(uid);
+      }
+    }
+  }
+}
