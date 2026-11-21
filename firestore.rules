@@ -1,22 +1,74 @@
-﻿rules_version = '2';
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Solo el propietario autenticado y verificado.
+    // Aislamiento por cuenta autenticada y correo confirmado.
     function esPropietario(uid) {
       return request.auth != null
         && request.auth.uid == uid
         && request.auth.token.email_verified == true;
     }
 
-    // Perfil del usuario.
-    match /users/{uid} {
-      allow read, write: if esPropietario(uid);
+    function numeroONulo(valor) {
+      return valor == null || valor is number;
+    }
 
-      // Dispositivos asociados al propietario.
+    function perfilValido(d) {
+      return d.keys().hasAll([
+          'nombre', 'correo', 'telefono', 'comuna', 'empresa',
+          'usarTarifaManual', 'valorKwhManual', 'cargoFijoManual'
+        ])
+        && d.keys().hasOnly([
+          'nombre', 'correo', 'telefono', 'comuna', 'empresa',
+          'usarTarifaManual', 'valorKwhManual', 'cargoFijoManual'
+        ])
+        && d.nombre is string && d.nombre.size() <= 120
+        && d.correo is string && d.correo.size() <= 254
+        && d.telefono is string && d.telefono.size() <= 40
+        && d.comuna is string && d.comuna.size() <= 120
+        && d.empresa is string && d.empresa.size() <= 160
+        && d.usarTarifaManual is bool
+        && numeroONulo(d.valorKwhManual)
+        && numeroONulo(d.cargoFijoManual)
+        && (d.valorKwhManual == null || d.valorKwhManual >= 0)
+        && (d.cargoFijoManual == null || d.cargoFijoManual >= 0);
+    }
+
+    function dispositivoValido(d) {
+      return d.keys().hasAll([
+          'id', 'nombre', 'categoria', 'marca', 'modelo',
+          'potenciaW', 'activo', 'fechaRegistro', 'fechaRetiro',
+          'tipoFuente'
+        ])
+        && d.keys().hasOnly([
+          'id', 'nombre', 'categoria', 'marca', 'modelo',
+          'potenciaW', 'activo', 'fechaRegistro', 'fechaRetiro',
+          'tipoFuente'
+        ])
+        && d.id is int && d.id > 0
+        && d.nombre is string && d.nombre.size() <= 120
+        && d.categoria is string && d.categoria.size() <= 120
+        && d.marca is string && d.marca.size() <= 120
+        && d.modelo is string && d.modelo.size() <= 120
+        && d.potenciaW is number && d.potenciaW >= 0
+        && d.activo is bool
+        && d.fechaRegistro is int && d.fechaRegistro >= 0
+        && (d.fechaRetiro == null || d.fechaRetiro is int)
+        && d.tipoFuente in ['SIMULADA', 'IOT_REAL'];
+    }
+
+    match /users/{uid} {
+      allow read: if esPropietario(uid);
+      allow create, update: if esPropietario(uid)
+        && perfilValido(request.resource.data);
+      allow delete: if false;
+
       match /devices/{deviceId} {
-        allow read, write: if esPropietario(uid);
+        allow read: if esPropietario(uid);
+        allow create, update: if esPropietario(uid)
+          && dispositivoValido(request.resource.data);
+        allow delete: if esPropietario(uid);
       }
     }
   }
