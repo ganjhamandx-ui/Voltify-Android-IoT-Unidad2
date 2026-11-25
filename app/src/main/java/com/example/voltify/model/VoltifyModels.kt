@@ -77,7 +77,7 @@ data class LecturaIot(
     val energiaTotalKwh: Double,
     val costoTotalClp: Double
 ) {
-    fun isRecent(now: Long): Boolean = now - muestraMs in -5_000L..90_000L
+    fun isRecent(now: Long): Boolean = now - muestraMs in -5_000L..8_000L
 }
 
 /** Lectura visible del monitoreo simulado que se actualiza periódicamente. */

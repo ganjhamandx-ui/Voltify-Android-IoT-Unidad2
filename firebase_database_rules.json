@@ -78,6 +78,39 @@
         "$other": {
           ".validate": false,
           ".write": false
+        },
+        "iotLive": {
+          "$artifactKey": {
+            ".validate": "newData.hasChildren(['muestraMs','voltajeV','corrienteMa','potenciaW','porcentaje','energiaTotalKwh','costoTotalClp','estado'])",
+            "muestraMs": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999999999"
+            },
+            "voltajeV": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 32"
+            },
+            "corrienteMa": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5000"
+            },
+            "potenciaW": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 160"
+            },
+            "porcentaje": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+            },
+            "energiaTotalKwh": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+            },
+            "costoTotalClp": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+            },
+            "estado": {
+              ".validate": "newData.val() === 'NORMAL' || newData.val() === 'ADVERTENCIA' || newData.val() === 'ELEVADO'"
+            },
+            "$other": {
+              ".validate": false
+            },
+            ".write": "auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'password' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val() === $artifactKey && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && newData.exists() && newData.child('muestraMs').val() >= now - 10000 && newData.child('muestraMs').val() <= now + 2000 && (!data.exists() || newData.child('muestraMs').val() > data.child('muestraMs').val())"
+          }
         }
       }
     },

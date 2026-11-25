@@ -49,6 +49,7 @@ class HybridVoltifyRepository(
     private var listeningUid: String? = null
     private var artifactsListener: ValueEventListener? = null
     private var consumptionsListener: ValueEventListener? = null
+    private var liveIotListener: ValueEventListener? = null
     private var metaListener: ValueEventListener? = null
 
     private fun stopCloudListener() {
@@ -57,12 +58,14 @@ class HybridVoltifyRepository(
         if (uid != null && listener != null) gateway.stopObservingArtifacts(uid, listener)
         if (uid != null) {
             consumptionsListener?.let { gateway.stopObservingConsumptions(uid, it) }
+            liveIotListener?.let { gateway.stopObservingLiveIot(uid, it) }
             metaListener?.let { gateway.stopObservingMeta(uid, it) }
         }
         listeningUid = null
         latestIot = null
         artifactsListener = null
         consumptionsListener = null
+        liveIotListener = null
         metaListener = null
     }
 
@@ -93,8 +96,12 @@ class HybridVoltifyRepository(
                     }
                 }
             }
-        }, { error -> Log.e("VoltifySync", "Listener consumptions: ${error.message}") }, { readings ->
+        }, { error -> Log.e("VoltifySync", "Listener consumptions: ${error.message}") })
+        liveIotListener = gateway.observeLiveIot(uid, { readings ->
             if (listeningUid == uid && gateway.currentUid() == uid) latestIot = uid to readings
+        }, { error ->
+            if (listeningUid == uid) latestIot = null
+            Log.e("VoltifySync", "Listener iotLive: ${error.message}")
         })
         metaListener = gateway.observeMeta(uid, { meta ->
             if (gateway.currentUid() == uid && metaWritePending == 0) {

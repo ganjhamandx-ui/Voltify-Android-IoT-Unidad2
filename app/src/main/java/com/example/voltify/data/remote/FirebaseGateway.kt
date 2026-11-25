@@ -159,25 +159,15 @@ class FirebaseGateway(context: Context) {
     fun observeConsumptions(
         uid: String,
         onChange: (List<ConsumoLocal>) -> Unit,
-        onError: (DatabaseError) -> Unit,
-        onTelemetry: (Map<Int, LecturaIot>) -> Unit
+        onError: (DatabaseError) -> Unit
     ): ValueEventListener {
         val ref = userRef(uid).child("consumptions")
         return object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 try {
-                    val latest = mutableMapOf<Int, LecturaIot>()
                     val rows = snapshot.children.map { item ->
-                        val row = item.toConsumption() ?: error("Consumo remoto inválido: ${item.key}")
-                        if (row.tipoFuente == TipoFuenteMonitoreo.IOT_REAL) {
-                            val reading = item.child("telemetria").toIotReading()
-                            if (reading != null && reading.muestraMs > (latest[row.artefactoId]?.muestraMs ?: 0)) {
-                                latest[row.artefactoId] = reading
-                            }
-                        }
-                        row
+                        item.toConsumption() ?: error("Consumo remoto inválido: ${item.key}")
                     }.sortedBy { it.fecha }
-                    onTelemetry(latest)
                     onChange(rows)
                 } catch (e: Exception) {
                     Log.e("VoltifyFirebase", "Lectura de consumos inválida; se conserva caché", e)
@@ -189,6 +179,29 @@ class FirebaseGateway(context: Context) {
 
     fun stopObservingConsumptions(uid: String, listener: ValueEventListener) {
         userRef(uid).child("consumptions").removeEventListener(listener)
+    }
+
+    fun observeLiveIot(
+        uid: String,
+        onChange: (Map<Int, LecturaIot>) -> Unit,
+        onError: (DatabaseError) -> Unit
+    ): ValueEventListener {
+        val ref = userRef(uid).child("iotLive")
+        return object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val readings = snapshot.children.mapNotNull { item ->
+                    val id = item.key?.toIntOrNull() ?: return@mapNotNull null
+                    item.toIotReading()?.let { id to it }
+                }.toMap()
+                onChange(readings)
+            }
+
+            override fun onCancelled(error: DatabaseError) = onError(error)
+        }.also { ref.addValueEventListener(it) }
+    }
+
+    fun stopObservingLiveIot(uid: String, listener: ValueEventListener) {
+        userRef(uid).child("iotLive").removeEventListener(listener)
     }
 
     fun observeMeta(

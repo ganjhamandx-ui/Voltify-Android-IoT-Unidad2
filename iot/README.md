@@ -4,10 +4,13 @@
 
 Arduino Uno R3 e INA219 → UART a 9600, RX D2 / TX D1 del NodeMCU → Wi-Fi de 2,4 GHz → HTTPS → Realtime Database → Voltify Android. Los sketches de revisión se conservaron tal como están publicados en `main`. Son revisiones de código fuente. Los respaldos binarios del firmware grabado permanecen separados.
 
-El sketch nuevo valida `V`, `I`, `P`, `POR`, `EST`, `E` y `C` en el orden del protocolo existente. Envía un registro por bloque UTC de 30 segundos con la última muestra válida del bloque:
+El sketch nuevo valida `V`, `I`, `P`, `POR`, `EST`, `E` y `C` en el orden del protocolo existente. Publica la última trama válida aproximadamente cada dos segundos y guarda un registro de historial por bloque UTC de 30 segundos:
 
 ```text
 https://voltify-e51f9-default-rtdb.firebaseio.com/
+  users/{ownerUid}/iotLive/{artifactKey}
+    muestraMs, voltajeV, corrienteMa, potenciaW, porcentaje, estado
+    energiaTotalKwh, costoTotalClp
   users/{ownerUid}/consumptions/{id}
     id, artefactoId, artefactoNombre, artefactoCategoria, artefactoMarca, artefactoModelo
     consumoKwh, fecha, tipoFuente = IOT_REAL
@@ -20,7 +23,7 @@ https://voltify-e51f9-default-rtdb.firebaseio.com/
 
 El ID es `1900000000 + slot × 10000000 + bloque`, donde el bloque cuenta intervalos de 30 segundos desde 2026-01-01 UTC. Los slots 0 a 23 son únicos **por propietario** durante la vida del historial. El PUT usa el mismo ID en cada reintento y las reglas solo autorizan la creación. Esto evita que un reintento, un reinicio o dos teléfonos sumen otra vez el bloque. El rango cubre aproximadamente 9,5 años desde la fecha de referencia. Antes de aprovisionar, comprobar que ese rango esté libre de IDs históricos en el propietario.
 
-Android consume los registros por el listener existente. La pantalla **Dispositivos** muestra la última muestra de cada artefacto físico activo y en monitoreo. Al caducar la muestra vuelve a indicar espera. El historial conserva los incrementos ya sincronizados y Android no reenvía las muestras físicas.
+Android escucha `iotLive` por separado del historial. Cada artefacto ocupa un solo nodo que se sobrescribe con muestras más nuevas. La pantalla **Dispositivos** actualiza la lectura desde ese listener y vuelve a indicar espera si la muestra supera 8 segundos. El canal en vivo no modifica el historial: los incrementos se leen por el listener de consumos existente y Android no reenvía las muestras físicas.
 
 ## Aprovisionamiento pendiente en Firebase Console
 
@@ -32,7 +35,7 @@ Ejecutar estos pasos solo con autorización para modificar el proyecto `voltify-
 4. En Realtime Database → Datos, crear individualmente `/iotDeviceBindings/{deviceUid}` con `enabled` booleano, `ownerUid` texto, `artifactKey` texto y `slot` numérico entero de 0 a 23. Usar un slot libre para ese propietario. Las reglas de cliente no permiten leer ni escribir las vinculaciones. Para revocar acceso, poner `enabled` en `false` y deshabilitar la cuenta de la placa en Authentication. Conservar la vinculación deshabilitada y el slot histórico.
 5. Aplicar las reglas revisadas únicamente cuando lo autorice el responsable del proyecto. Verificar con el emulador antes de repetir en producción. Si el API key Android existente está restringido al paquete Android, usar una clave cliente del mismo proyecto compatible con Identity Toolkit y Secure Token para el ESP8266.
 
-La cuenta dedicada permite aprovisionar el prototipo sin servidor adicional y limita la escritura a consumos nuevos de un artefacto IoT vinculado. Firebase Auth REST devuelve un ID token y un refresh token. El ESP8266 renueva el ID token antes de su expiración, y ante un fallo de renovación por credenciales inválidas vuelve a iniciar sesión con la cuenta dedicada. Diagnostica por códigos HTTP sin imprimir credenciales ni URLs autenticadas. [Firebase Auth REST](https://firebase.google.com/docs/reference/rest/auth/) · [Autenticación de RTDB REST](https://firebase.google.com/docs/database/rest/auth)
+La cuenta dedicada permite aprovisionar el prototipo sin servidor adicional y limita la escritura a nuevos bloques de consumo y a la última lectura de un solo artefacto IoT vinculado. Firebase Auth REST devuelve un ID token y un refresh token. El ESP8266 renueva el ID token antes de su expiración, y ante un fallo de renovación por credenciales inválidas vuelve a iniciar sesión con la cuenta dedicada. Diagnostica por códigos HTTP sin imprimir credenciales ni URLs autenticadas. [Firebase Auth REST](https://firebase.google.com/docs/reference/rest/auth/) · [Autenticación de RTDB REST](https://firebase.google.com/docs/database/rest/auth)
 
 ## Preparación de la placa
 
@@ -41,21 +44,21 @@ La cuenta dedicada permite aprovisionar el prototipo sin servidor adicional y li
 3. Compilar con **Verificar**. El firmware espera hora SNTP y valida TLS contra GTS Root R1–R4, incluidos en el código. La red debe resolver los hosts de Firebase y permitir SNTP y HTTPS. Si el operador de los endpoints cambia sus raíces, actualizar las anclas desde el repositorio oficial y recompilar. [Google Trust Services](https://pki.goog/repository/)
 4. Cuando estén autorizadas la programación del ESP8266 y la actualización de Android, instalar el build de integración mediante el procedimiento acordado para preservar los datos de la aplicación. Si Android rechaza la actualización por la firma, detenerse y usar una compilación compatible con la firma de la instalación existente.
 
-El ESP8266 conserva un bloque abierto y un solo envío pendiente. Si la red se interrumpe, un bloque reciente reemplaza al anterior pendiente y las muestras de más de 90 segundos se descartan. El cliente HTTPS síncrono puede interrumpir temporalmente el procesamiento de UART durante la conexión o la respuesta. El búfer tiene tamaño fijo y se descartan las tramas acumuladas durante operaciones largas porque UART carece de hora de origen. Tras una caída larga puede haber huecos en el historial. La resolución de `E` es de 0,000001 kWh y con cargas pequeñas pueden aparecer bloques de incremento cero. En uso continuo se generan hasta 2.880 filas por artefacto al día y la sincronización existente lee la colección completa. Limitar la duración de las sesiones del prototipo.
+El ESP8266 conserva un bloque abierto y un solo bloque pendiente. El canal en vivo toma una trama de hasta cinco segundos de antigüedad y no encola muestras. Las dos rutas de RTDB comparten la conexión HTTPS persistente cuando el servidor lo permite. Antes de autenticar o renovar, el firmware libera esa conexión y sus búferes. El monitor serie muestra el heap libre y el mayor bloque libre al publicar el historial o ante errores de RTDB. La latencia y el heap dinámico se verifican en la placa durante la prueba autorizada. Si la red se interrumpe, un bloque reciente reemplaza al anterior pendiente y las muestras de más de 90 segundos se descartan. El cliente HTTPS síncrono puede interrumpir temporalmente el procesamiento de UART durante la conexión o la respuesta. El búfer tiene tamaño fijo y se descartan las tramas acumuladas durante operaciones largas porque UART carece de hora de origen. Tras una caída larga puede haber huecos en el historial. La resolución de `E` es de 0,000001 kWh y con cargas pequeñas pueden aparecer bloques de incremento cero. En uso continuo se generan hasta 2.880 filas históricas por artefacto al día. El listener de historial conserva el comportamiento anterior y la vista en vivo solo consume la rama compacta. Limitar la duración de las sesiones del prototipo.
 
 ## Una prueba física controlada
 
 1. Con la batería desconectada, confirmar el proyecto, los IDs y la vinculación. Activar monitoreo del artefacto de prueba en Android y verificar en RTDB que `monitoreando` es `true`.
 2. Tras autorizar el paso de programación, cargar el nuevo sketch **solo a COM4**. Abrir el Monitor Serial de COM4 a 9600 y esperar Wi-Fi, Auth HTTP 200 y RTDB HTTP 204. Mantener el Arduino de COM3 con el firmware instalado.
-3. Energizar el montaje de prueba existente y esperar entre 30 y 60 segundos. En RTDB comprobar la aparición de un ID nuevo en el UID y artefacto esperados, y que `telemetria` refleja la carga. Comprobar en **Dispositivos** el voltaje, corriente, potencia, estado y hora. En historial, contrastar el incremento por bloque con `consumoKwh`.
-4. Desconectar la batería de prueba. Con el INA219 y los microcontroladores aún encendidos, comprobar que la siguiente muestra refleja el cambio de carga. Detener el monitoreo del artefacto de prueba y deshabilitar su vinculación si termina la demostración.
+3. Energizar el montaje de prueba. Durante un minuto, comprobar en `iotLive/{artifactKey}` y en **Dispositivos** que la hora y las lecturas avanzan aproximadamente cada 1–3 segundos con Wi-Fi estable. Confirmar que cada bloque de 30 segundos produce un solo registro en `consumptions` y que su `consumoKwh` corresponde al incremento. Registrar el heap libre y el mayor bloque libre en los mensajes HTTP 204 del historial.
+4. Desconectar la batería de prueba. Con el INA219 y los microcontroladores aún encendidos, comprobar que la siguiente muestra refleja el cambio de carga. En la misma sesión, interrumpir brevemente el Wi-Fi de la placa y comprobar que Android muestra espera tras caducar la lectura y vuelve a mostrar datos al reconectar. Confirmar que no aparecen bloques duplicados. Detener el monitoreo y deshabilitar la vinculación al terminar la demostración.
 
 ## Verificaciones locales
 
 Desde la raíz del repositorio, con JDK de Android Studio, Arduino CLI y los paquetes instalados:
 
 ```powershell
-.\gradlew.bat --offline assembleDebug testDebugUnitTest
+.\gradlew.bat --offline assembleDebug testDebugUnitTest --tests com.example.voltify.LecturaIotTest
 arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 iot/firmware/esp8266/Voltify_NodeMCU_Firebase
 ```
 

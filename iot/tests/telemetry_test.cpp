@@ -33,7 +33,20 @@ int main() {
   readings.accept(input, Epoch + 5, 5000);
   input.totalKwh = 0.001;
   readings.accept(input, Epoch + 25, 25000);  // Hueco de recepción.
+  assert(LiveIntervalMs == 2000);
+  const Sample* live = readings.liveSample(Epoch + 25, Epoch + 24);
+  assert(live && live->time == Epoch + 25);
+  assert(readings.liveSample(Epoch + 25, live->time) == nullptr);
+  assert(readings.liveSample(Epoch + 24, 0) == nullptr);
+  assert(readings.liveSample(Epoch + 30, 0) == live);
+  assert(readings.liveSample(Epoch + 31, 0) == nullptr);
+  ArduinoJson::JsonDocument liveDocument;
+  makeTelemetry(liveDocument.to<ArduinoJson::JsonObject>(), *live);
+  assert(liveDocument.size() == 8);
+  assert(liveDocument["muestraMs"].as<int64_t>() == (Epoch + 25) * 1000);
+  assert(liveDocument["consumoKwh"].isNull());
   readings.closeBucket(Epoch + 30);
+  assert(readings.liveSample(Epoch + 30, 0) == nullptr);
   assert(readings.pending.bucket == 0);
   assert(readings.pending.time == Epoch + 25);
   assert(fabs(readings.pending.increment - 0.000002) < 1e-12);

@@ -11,6 +11,8 @@ constexpr int Slots = 24;
 constexpr int BucketCount = 10000000;
 constexpr int IdBase = 1900000000;
 constexpr int MaxAgeSeconds = 90;
+constexpr int LiveMaxAgeSeconds = 5;
+constexpr uint32_t LiveIntervalMs = 2000;
 
 struct Reading {
   double volts, milliamps, watts, percent, totalKwh, costClp;
@@ -98,6 +100,12 @@ class Aggregator {
     current.bucket = static_cast<int>(index);
     current.time = time;
     current.reading = reading;
+  }
+
+  const Sample* liveSample(int64_t now, int64_t after) const {
+    if (current.bucket < 0 || current.time <= after || now < current.time ||
+        now - current.time > LiveMaxAgeSeconds) return nullptr;
+    return &current;
   }
 
   void closeBucket(int64_t time) {

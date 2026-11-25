@@ -19,6 +19,8 @@ constexpr uint32_t HttpTimeoutMs = 4500;
 SoftwareSerial uart;
 BearSSL::X509List roots(GoogleRoots);
 Voltify::Aggregator aggregator;
+BearSSL::WiFiClientSecure databaseTls;
+HTTPClient databaseHttp;
 char line[128];
 size_t lineSize = 0;
 bool discardLine = false;
@@ -30,6 +32,8 @@ uint32_t networkDue = 0;
 uint32_t wifiDue = 0;
 uint32_t backoff = 2000;
 uint32_t tokenDue = 0;
+uint32_t liveDue = 0;
+int64_t lastLiveTime = 0;
 String idToken;
 String refreshToken;
 
@@ -175,24 +179,32 @@ bool authenticate() {
   return true;
 }
 
-int publish(const Voltify::Sample& sample) {
-  const int id = Voltify::recordId(DEVICE_SLOT, sample.bucket);
+int publish(const Voltify::Sample& sample, bool live) {
   JsonDocument row;
-  Voltify::makeRecord(row, sample, id, atoi(ARTIFACT_KEY), ARTIFACT_NAME,
-                      ARTIFACT_CATEGORY, ARTIFACT_BRAND, ARTIFACT_MODEL);
+  String url = String(Database) + "/users/" + OWNER_UID;
+  if (live) {
+    Voltify::makeTelemetry(row.to<JsonObject>(), sample);
+    url += String("/iotLive/") + ARTIFACT_KEY;
+  } else {
+    const int id = Voltify::recordId(DEVICE_SLOT, sample.bucket);
+    Voltify::makeRecord(row, sample, id, atoi(ARTIFACT_KEY), ARTIFACT_NAME,
+                        ARTIFACT_CATEGORY, ARTIFACT_BRAND, ARTIFACT_MODEL);
+    url += String("/consumptions/") + id;
+  }
+  url += String(".json?print=silent&auth=") + idToken;
   String body;
   serializeJson(row, body);
 
-  const String url = String(Database) + "/users/" + OWNER_UID + "/consumptions/" +
-      id + ".json?print=silent&auth=" + idToken;
-  BearSSL::WiFiClientSecure tls;
-  HTTPClient http;
-  configureHttp(http, tls);
-  if (!http.begin(tls, url)) return -1;
-  http.addHeader("Content-Type", "application/json");
-  const int status = http.PUT(body);
-  http.end();
-  Serial.printf("RTDB bloque %d HTTP %d\n", sample.bucket, status);
+  if (!databaseHttp.begin(databaseTls, url)) return -1;
+  databaseHttp.addHeader("Content-Type", "application/json");
+  const int status = databaseHttp.PUT(body);
+  if (status != 204 && status != 200) databaseTls.stop();
+  databaseHttp.end();
+  if (!live || status != 204) {
+    Serial.printf("RTDB %s HTTP %d | heap=%u bloque libre=%u\n",
+                  live ? "en vivo" : "historial", status,
+                  ESP.getFreeHeap(), ESP.getMaxFreeBlockSize());
+  }
   return status;
 }
 
@@ -206,7 +218,10 @@ void tickNetwork() {
   if (WiFi.status() != WL_CONNECTED) {
     if (wasConnected) {
       Serial.println(F("Wi-Fi desconectado"));
+      databaseTls.stop();
+      databaseHttp.end();
       wifiDue = millis();
+      liveDue = wifiDue;
     }
     wasConnected = false;
     if (due(wifiDue)) {
@@ -226,25 +241,41 @@ void tickNetwork() {
 
   const uint32_t started = millis();
   if (idToken.isEmpty() || due(tokenDue)) {
+    // Liberar los búferes de RTDB antes de abrir TLS hacia Firebase Auth.
+    databaseTls.stop();
+    databaseHttp.end();
     if (authenticate()) {
       networkDue = millis();
     } else {
       postpone();
     }
-  } else if (aggregator.pending.bucket >= 0) {
-    const auto result = Voltify::classifyWrite(publish(aggregator.pending));
+  } else {
+    const bool live = aggregator.pending.bucket < 0;
+    const auto* sample = live ? aggregator.liveSample(time(nullptr), lastLiveTime)
+                              : &aggregator.pending;
+    if (sample == nullptr || (live && !due(liveDue))) return;
+    if (live) liveDue = started + Voltify::LiveIntervalMs;
+
+    const auto result = Voltify::classifyWrite(publish(*sample, live));
     if (result == Voltify::WriteResult::RenewToken && !renewedAfterDenial) {
       idToken = "";
       renewedAfterDenial = true;
-    } else if (result != Voltify::WriteResult::Retry) {
-      aggregator.pending = Voltify::Sample{};
-    }
-    if (result == Voltify::WriteResult::Accepted) {
-      renewedAfterDenial = false;
+      postpone();
+    } else if (result == Voltify::WriteResult::Retry) {
+      postpone();
+    } else {
+      if (live) {
+        if (result == Voltify::WriteResult::Accepted) {
+          lastLiveTime = sample->time;
+        } else {
+          liveDue = millis() + 10000;
+        }
+      } else {
+        aggregator.pending = Voltify::Sample{};
+      }
+      if (result == Voltify::WriteResult::Accepted) renewedAfterDenial = false;
       networkDue = millis();
       backoff = 2000;
-    } else {
-      postpone();
     }
   }
   // La UART no trae marcas de tiempo; descartar el backlog de una operación larga.
@@ -271,6 +302,10 @@ void setup() {
     Serial.println(F("Completa VoltifyConfig.local.h para habilitar la red"));
     return;
   }
+  databaseTls.setTrustAnchors(&roots);
+  databaseTls.setTimeout(HttpTimeoutMs);
+  databaseHttp.setTimeout(HttpTimeoutMs);
+  databaseHttp.setReuse(true);
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);

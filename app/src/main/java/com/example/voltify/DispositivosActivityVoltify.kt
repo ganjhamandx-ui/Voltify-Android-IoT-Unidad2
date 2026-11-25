@@ -73,7 +73,7 @@ class DispositivosActivityVoltify : AppCompatActivity() {
                 launch {
                     while (isActive) {
                         updateIotReadingViews()
-                        delay(3000)
+                        delay(1000)
                     }
                 }
             }
