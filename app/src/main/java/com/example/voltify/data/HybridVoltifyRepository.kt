@@ -10,6 +10,7 @@ import com.example.voltify.model.ArtefactoLocal
 import com.example.voltify.model.AuthOutcome
 import com.example.voltify.model.AuthStatus
 import com.example.voltify.model.ConsumoLocal
+import com.example.voltify.model.LecturaIot
 import com.example.voltify.model.MetaLocal
 import com.example.voltify.model.MonitoreoLecturaActual
 import com.example.voltify.model.TipoFuenteMonitoreo
@@ -44,6 +45,7 @@ class HybridVoltifyRepository(
     @Volatile private var artifactWritePending = 0
     @Volatile private var consumptionWritePending = 0
     @Volatile private var metaWritePending = 0
+    @Volatile private var latestIot: Pair<String, Map<Int, LecturaIot>>? = null
     private var listeningUid: String? = null
     private var artifactsListener: ValueEventListener? = null
     private var consumptionsListener: ValueEventListener? = null
@@ -58,6 +60,7 @@ class HybridVoltifyRepository(
             metaListener?.let { gateway.stopObservingMeta(uid, it) }
         }
         listeningUid = null
+        latestIot = null
         artifactsListener = null
         consumptionsListener = null
         metaListener = null
@@ -90,7 +93,9 @@ class HybridVoltifyRepository(
                     }
                 }
             }
-        }, { error -> Log.e("VoltifySync", "Listener consumptions: ${error.message}") })
+        }, { error -> Log.e("VoltifySync", "Listener consumptions: ${error.message}") }, { readings ->
+            if (listeningUid == uid && gateway.currentUid() == uid) latestIot = uid to readings
+        })
         metaListener = gateway.observeMeta(uid, { meta ->
             if (gateway.currentUid() == uid && metaWritePending == 0) {
                 ioScope.launch {
@@ -301,6 +306,13 @@ class HybridVoltifyRepository(
         val previous = local.getConsumptions().associateBy { it.id }
         local.appendSimulatedConsumption(artifactId, kwh, bucket)
         local.getConsumptions().firstOrNull { previous[it.id] != it }?.let(::syncConsumption)
+    }
+
+    override fun latestIotReadings(): Map<Int, LecturaIot> {
+        val (uid, readings) = latestIot ?: return emptyMap()
+        if (gateway.currentUid() != uid || !VoltifyLocalDataSource.hasActiveSession(appContext)) return emptyMap()
+        val now = System.currentTimeMillis()
+        return readings.filterValues { it.isRecent(now) }
     }
 
     override fun registerReading(artifactId: Int, kwh: Double, timestamp: Long) {

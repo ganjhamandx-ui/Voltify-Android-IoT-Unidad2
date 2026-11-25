@@ -128,6 +128,8 @@ class ArtefactosViewModel(application: Application) : BaseVoltifyViewModel(appli
         _liveReadings.value = emptyMap()
     }
 
+    fun latestIotReadings() = repository.latestIotReadings()
+
     fun liveReadingFor(id: Int): MonitoreoLecturaActual? = _liveReadings.value[id]
 
     /**

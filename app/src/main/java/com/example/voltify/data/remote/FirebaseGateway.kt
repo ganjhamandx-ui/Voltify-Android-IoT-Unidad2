@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.voltify.data.local.VoltifyIds
 import com.example.voltify.model.ArtefactoLocal
 import com.example.voltify.model.ConsumoLocal
+import com.example.voltify.model.LecturaIot
 import com.example.voltify.model.MetaLocal
 import com.example.voltify.model.TipoFuenteMonitoreo
 import com.example.voltify.model.UsuarioLocal
@@ -158,15 +159,25 @@ class FirebaseGateway(context: Context) {
     fun observeConsumptions(
         uid: String,
         onChange: (List<ConsumoLocal>) -> Unit,
-        onError: (DatabaseError) -> Unit
+        onError: (DatabaseError) -> Unit,
+        onTelemetry: (Map<Int, LecturaIot>) -> Unit
     ): ValueEventListener {
         val ref = userRef(uid).child("consumptions")
         return object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 try {
+                    val latest = mutableMapOf<Int, LecturaIot>()
                     val rows = snapshot.children.map { item ->
-                        item.toConsumption() ?: error("Consumo remoto inválido: ${item.key}")
+                        val row = item.toConsumption() ?: error("Consumo remoto inválido: ${item.key}")
+                        if (row.tipoFuente == TipoFuenteMonitoreo.IOT_REAL) {
+                            val reading = item.child("telemetria").toIotReading()
+                            if (reading != null && reading.muestraMs > (latest[row.artefactoId]?.muestraMs ?: 0)) {
+                                latest[row.artefactoId] = reading
+                            }
+                        }
+                        row
                     }.sortedBy { it.fecha }
+                    onTelemetry(latest)
                     onChange(rows)
                 } catch (e: Exception) {
                     Log.e("VoltifyFirebase", "Lectura de consumos inválida; se conserva caché", e)
@@ -341,6 +352,26 @@ class FirebaseGateway(context: Context) {
             }.getOrDefault(TipoFuenteMonitoreo.SIMULADA)
         )
     }.getOrNull()
+
+    private fun DataSnapshot.toIotReading(): LecturaIot? {
+        if (!exists()) return null
+        fun number(key: String, max: Double): Double? =
+            (child(key).value as? Number)?.toDouble()?.takeIf { it in 0.0..max }
+
+        val time = (child("muestraMs").value as? Long)?.takeIf { it > 0 } ?: return null
+        val state = child("estado").value as? String ?: return null
+        if (state != "NORMAL" && state != "ADVERTENCIA" && state != "ELEVADO") return null
+        return LecturaIot(
+            time,
+            number("voltajeV", 32.0) ?: return null,
+            number("corrienteMa", 5000.0) ?: return null,
+            number("potenciaW", 160.0) ?: return null,
+            number("porcentaje", 1000000.0) ?: return null,
+            state,
+            number("energiaTotalKwh", 100000.0) ?: return null,
+            number("costoTotalClp", 1000000000.0) ?: return null
+        )
+    }
 
     private fun DataSnapshot.toMeta(): MetaLocal? {
         if (!exists()) return null

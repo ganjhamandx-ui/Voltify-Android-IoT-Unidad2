@@ -17,7 +17,9 @@ import com.example.voltify.model.ArtefactoLocal
 import com.example.voltify.model.MonitoreoLecturaActual
 import com.example.voltify.model.TipoFuenteMonitoreo
 import com.example.voltify.ui.artefactos.ArtefactosViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class DispositivosActivityVoltify : AppCompatActivity() {
@@ -29,6 +31,7 @@ class DispositivosActivityVoltify : AppCompatActivity() {
     // Las lecturas en vivo actualizan solo estos textos. No se reconstruye la lista
     // ni los botones cada 3 segundos, por lo que Editar/Detener/Retirar/Eliminar
     // permanecen estables y clickeables durante la simulación.
+    private val iotViews = mutableMapOf<Int, TextView>()
     private val powerViews = mutableMapOf<Int, TextView>()
     private val incrementViews = mutableMapOf<Int, TextView>()
     private val timeViews = mutableMapOf<Int, TextView>()
@@ -67,6 +70,12 @@ class DispositivosActivityVoltify : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { viewModel.artifacts.collect { renderFiltered() } }
                 launch { viewModel.liveReadings.collect { updateLiveReadingViews(it) } }
+                launch {
+                    while (isActive) {
+                        updateIotReadingViews()
+                        delay(3000)
+                    }
+                }
             }
         }
     }
@@ -92,6 +101,7 @@ class DispositivosActivityVoltify : AppCompatActivity() {
 
     private fun render(items: List<ArtefactoLocal>) {
         box.removeAllViews()
+        iotViews.clear()
         powerViews.clear()
         incrementViews.clear()
         timeViews.clear()
@@ -167,7 +177,9 @@ class DispositivosActivityVoltify : AppCompatActivity() {
                     panel.addView(increment)
                     panel.addView(time)
                 } else if (artifact.tipoFuente == TipoFuenteMonitoreo.IOT_REAL && artifact.monitoreando) {
-                    panel.addView(makeText(getString(R.string.iot_waiting_readings), 11f, R.color.voltify_cyan))
+                    val telemetry = makeText(getString(R.string.iot_waiting_readings), 11f, R.color.voltify_cyan)
+                    iotViews[artifact.id] = telemetry
+                    panel.addView(telemetry)
                 }
 
                 val retireButton = makeActionButton("Retirar", danger = true).apply {
@@ -203,6 +215,25 @@ class DispositivosActivityVoltify : AppCompatActivity() {
         }
 
         updateLiveReadingViews(viewModel.liveReadings.value)
+        updateIotReadingViews()
+    }
+
+    private fun updateIotReadingViews() {
+        if (iotViews.isEmpty()) return
+        val readings = viewModel.latestIotReadings()
+        iotViews.forEach { (id, view) ->
+            val reading = readings[id]
+            view.text = if (reading == null) {
+                getString(R.string.iot_waiting_readings)
+            } else {
+                getString(
+                    R.string.iot_live_telemetry,
+                    reading.voltajeV, reading.corrienteMa, reading.potenciaW, reading.porcentaje,
+                    reading.estado, reading.energiaTotalKwh, reading.costoTotalClp,
+                    viewModel.formatChileDate(reading.muestraMs)
+                )
+            }
+        }
     }
 
     private fun updateLiveReadingViews(readings: Map<Int, MonitoreoLecturaActual>) {

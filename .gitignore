@@ -39,3 +39,6 @@ local.properties
 .env.*
 **/google-services.json
 *.log
+
+# Configuración privada por placa
+VoltifyConfig.local.h

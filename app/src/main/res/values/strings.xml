@@ -166,4 +166,5 @@
     <string name="password_policy">Seguridad: mínimo 12 caracteres, con mayúscula, minúscula, número y símbolo. No uses tu nombre ni correo.</string>
     <string name="email_change_security_note">El correo de acceso no se cambia desde Configuración. En modo Firebase requerirá reautenticación.</string>
     <string name="sync_secure_local">Almacenamiento local: cifrado AES-GCM · contraseñas PBKDF2</string>
+    <string name="iot_live_telemetry">%1$.2f V · %2$.2f mA · %3$.3f W\n%4$.1f %% · %5$s\nAcumulados de la placa: %6$.6f kWh · $%7$.3f CLP\n%8$s</string>
 </resources>

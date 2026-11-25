@@ -58,7 +58,7 @@ IMPORTANTE
 ----------
 - Para la formativa NO se inventan lecturas IOT_REAL. La fuente SIMULADA cambia dinámicamente.
 - Para la sumativa, al agregar Firebase se sincronizan las mismas entidades por UID.
-- Para la evaluación posterior con hardware, IotConsumptionBridge sigue siendo la entrada de lecturas INA219/ESP8266.
+- La integración física se configura según iot/README.md. IotConsumptionBridge expone la telemetría reciente del INA219/ESP8266.
 
 
 ACTUALIZACION 12.3 - VALIDACION PARA SUMATIVA 2
@@ -70,4 +70,4 @@ ACTUALIZACION 12.3 - VALIDACION PARA SUMATIVA 2
 - Las reglas incluidas en firebase_database_rules.json fueron endurecidas para escrituras específicas. Su presencia en el ZIP NO implica que estén publicadas en Firebase. Respaldar las reglas vigentes antes de reemplazarlas y probar en consola.
 - Los datos tariff son estimaciones locales hasta integrar API oficial, no precios certificados ni actualizados.
 - Las transacciones Firebase de consumos simulados son seguras ante colisiones online, pero las transacciones iniciadas sin conexión NO se conservan al reiniciar la aplicación: durante una prueba offline detener el monitoreo antes de cortar la red.
-- La app no incorpora aún lecturas físicas del Arduino, INA219 o ESP8266.
+- La rama de integración física añade lecturas IOT_REAL por artefacto. El aprovisionamiento y la publicación de reglas de producción requieren autorización.

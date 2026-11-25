@@ -4,32 +4,86 @@
     ".write": false,
     "users": {
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid && auth.token.email_verified === true",
+        ".read": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true",
         "profile": {
-          ".write": "auth != null && auth.uid === $uid && (auth.token.email_verified === true || !data.exists())",
+          ".write": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && (auth.token.email_verified === true || !data.exists())",
           ".validate": "newData.hasChildren(['nombre','correo','telefono','comuna','empresa','usarTarifaManual']) && newData.child('nombre').isString() && newData.child('nombre').val().length >= 3 && newData.child('nombre').val().length <= 100 && newData.child('correo').isString() && newData.child('correo').val() === auth.token.email && newData.child('telefono').isString() && newData.child('telefono').val().length <= 30 && newData.child('comuna').isString() && newData.child('comuna').val().length <= 80 && newData.child('empresa').isString() && newData.child('empresa').val().length <= 100 && newData.child('usarTarifaManual').isBoolean()"
         },
         "artifacts": {
           "$id": {
             ".validate": "newData.hasChildren(['id','nombre','categoria','marca','modelo','potenciaW','activo','monitoreando','fechaRegistro','tipoFuente']) && newData.child('id').isNumber() && newData.child('nombre').isString() && newData.child('nombre').val().length > 0 && newData.child('nombre').val().length <= 100 && newData.child('categoria').isString() && newData.child('marca').isString() && newData.child('modelo').isString() && newData.child('potenciaW').isNumber() && newData.child('potenciaW').val() > 0 && newData.child('potenciaW').val() <= 50000 && newData.child('activo').isBoolean() && newData.child('monitoreando').isBoolean() && newData.child('fechaRegistro').isNumber() && (newData.child('tipoFuente').val() === 'SIMULADA' || newData.child('tipoFuente').val() === 'IOT_REAL')",
-            ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+            ".write": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true"
           }
         },
         "consumptions": {
           "$id": {
             ".validate": "newData.hasChildren(['id','artefactoId','artefactoNombre','artefactoCategoria','artefactoMarca','artefactoModelo','consumoKwh','fecha','tipoFuente']) && newData.child('id').isNumber() && newData.child('artefactoId').isNumber() && newData.child('artefactoNombre').isString() && newData.child('consumoKwh').isNumber() && newData.child('consumoKwh').val() >= 0 && newData.child('consumoKwh').val() <= 100000 && newData.child('fecha').isNumber() && (newData.child('tipoFuente').val() === 'SIMULADA' || newData.child('tipoFuente').val() === 'IOT_REAL')",
-            ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+            ".write": "(auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true && !data.child('telemetria').exists() && !newData.child('telemetria').exists() && (!newData.exists() || newData.child('id').val() < 1900000000)) || (auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'password' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('slot').val() >= 0 && root.child('iotDeviceBindings').child(auth.uid).child('slot').val() < 24 && !data.exists() && newData.exists() && newData.child('telemetria').exists() && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('monitoreando').val() === true && newData.child('artefactoId').val() === root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('id').val() && newData.child('tipoFuente').val() === 'IOT_REAL' && newData.child('fecha').val() % 30000 === 0 && ((newData.child('fecha').val() - 1767225600000) / 30000) >= 0 && ((newData.child('fecha').val() - 1767225600000) / 30000) < 10000000 && newData.child('id').val() === 1900000000 + root.child('iotDeviceBindings').child(auth.uid).child('slot').val() * 10000000 + ((newData.child('fecha').val() - 1767225600000) / 30000) && $id === '' + newData.child('id').val() && newData.child('telemetria/muestraMs').val() >= newData.child('fecha').val() && newData.child('telemetria/muestraMs').val() < newData.child('fecha').val() + 30000 && newData.child('telemetria/muestraMs').val() >= now - 90000 && newData.child('telemetria/muestraMs').val() <= now && newData.child('consumoKwh').val() <= 0.002)",
+            "id": {},
+            "artefactoId": {},
+            "consumoKwh": {},
+            "fecha": {},
+            "tipoFuente": {},
+            "artefactoNombre": {
+              ".validate": "!newData.parent().child('telemetria').exists() || (newData.isString() && newData.val().length <= 120)"
+            },
+            "artefactoCategoria": {
+              ".validate": "!newData.parent().child('telemetria').exists() || (newData.isString() && newData.val().length <= 120)"
+            },
+            "artefactoMarca": {
+              ".validate": "!newData.parent().child('telemetria').exists() || (newData.isString() && newData.val().length <= 120)"
+            },
+            "artefactoModelo": {
+              ".validate": "!newData.parent().child('telemetria').exists() || (newData.isString() && newData.val().length <= 120)"
+            },
+            "$other": {
+              ".validate": "!newData.parent().child('telemetria').exists()"
+            },
+            "telemetria": {
+              ".validate": "newData.hasChildren(['muestraMs','voltajeV','corrienteMa','potenciaW','porcentaje','energiaTotalKwh','costoTotalClp','estado'])",
+              "muestraMs": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999999999"
+              },
+              "voltajeV": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 32"
+              },
+              "corrienteMa": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5000"
+              },
+              "potenciaW": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 160"
+              },
+              "porcentaje": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+              },
+              "energiaTotalKwh": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+              },
+              "costoTotalClp": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+              },
+              "estado": {
+                ".validate": "newData.val() === 'NORMAL' || newData.val() === 'ADVERTENCIA' || newData.val() === 'ELEVADO'"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
           }
         },
         "meta": {
           ".validate": "!newData.exists() || ((newData.child('consumoKwh').val() == null || (newData.child('consumoKwh').isNumber() && newData.child('consumoKwh').val() > 0)) && (newData.child('costoClp').val() == null || (newData.child('costoClp').isNumber() && newData.child('costoClp').val() > 0)))",
-          ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true"
+          ".write": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true"
         },
         "$other": {
           ".validate": false,
           ".write": false
         }
       }
+    },
+    "iotDeviceBindings": {
+      ".read": false,
+      ".write": false
     }
   }
 }

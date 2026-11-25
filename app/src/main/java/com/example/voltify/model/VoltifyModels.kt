@@ -67,6 +67,19 @@ data class ConsumoLocal(
     val tipoFuente: TipoFuenteMonitoreo = TipoFuenteMonitoreo.SIMULADA
 )
 
+data class LecturaIot(
+    val muestraMs: Long,
+    val voltajeV: Double,
+    val corrienteMa: Double,
+    val potenciaW: Double,
+    val porcentaje: Double,
+    val estado: String,
+    val energiaTotalKwh: Double,
+    val costoTotalClp: Double
+) {
+    fun isRecent(now: Long): Boolean = now - muestraMs in -5_000L..90_000L
+}
+
 /** Lectura visible del monitoreo simulado que se actualiza periódicamente. */
 data class MonitoreoLecturaActual(
     val artefactoId: Int,
