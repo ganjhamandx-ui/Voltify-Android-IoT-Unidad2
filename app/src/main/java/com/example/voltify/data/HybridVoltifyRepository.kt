@@ -11,6 +11,7 @@ import com.example.voltify.model.AuthOutcome
 import com.example.voltify.model.AuthStatus
 import com.example.voltify.model.ConsumoLocal
 import com.example.voltify.model.LecturaIot
+import com.example.voltify.model.IotTarget
 import com.example.voltify.model.MetaLocal
 import com.example.voltify.model.MonitoreoLecturaActual
 import com.example.voltify.model.TipoFuenteMonitoreo
@@ -313,6 +314,14 @@ class HybridVoltifyRepository(
         val previous = local.getConsumptions().associateBy { it.id }
         local.appendSimulatedConsumption(artifactId, kwh, bucket)
         local.getConsumptions().firstOrNull { previous[it.id] != it }?.let(::syncConsumption)
+    }
+
+    override suspend fun sendIotCommand(artifactId: Int, target: IotTarget): Boolean {
+        val uid = gateway.currentUid() ?: return false
+        val artifact = local.getArtifact(artifactId) ?: return false
+        if (!artifact.activo || !artifact.monitoreando || artifact.tipoFuente != TipoFuenteMonitoreo.IOT_REAL) return false
+        firestore.requireInventoryTarget(uid, target.componentId)
+        return gateway.sendIotCommand(uid, artifactId, target.componentId)
     }
 
     override fun latestIotReadings(): Map<Int, LecturaIot> {

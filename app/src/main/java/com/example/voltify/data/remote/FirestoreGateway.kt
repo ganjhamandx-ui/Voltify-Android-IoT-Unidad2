@@ -32,6 +32,14 @@ class FirestoreGateway {
         check(currentUser.isEmailVerified) { "Debes verificar el correo antes de sincronizar" }
     }
 
+    suspend fun requireInventoryTarget(uid: String, componentId: String) {
+        requireOwnerVerified(uid)
+        val component = db.collection("users").document(uid).collection("iotComponents")
+            .document(componentId).get(com.google.firebase.firestore.Source.SERVER).awaitTask()
+        check(component.getString("componentId") == componentId &&
+            component.getString("prototypeId") == "voltify-01") { "Componente sin aprovisionar" }
+    }
+
     /** Guarda el perfil sin contrasena, usando la identidad autenticada. */
     suspend fun saveProfile(uid: String, profile: UsuarioLocal) {
         requireOwnerVerified(uid)

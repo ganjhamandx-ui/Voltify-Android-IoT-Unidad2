@@ -64,6 +64,36 @@ service cloud.firestore {
         && perfilValido(request.resource.data);
       allow delete: if false;
 
+      match /iotComponents/{componentId} {
+        function connectionValid(c) {
+          return c is map
+            && c.keys().hasAll(['bus', 'targetComponentId', 'localPins', 'targetPins'])
+            && c.keys().hasOnly(['bus', 'targetComponentId', 'localPins', 'targetPins', 'address', 'baud'])
+            && c.targetComponentId is string && c.targetComponentId.matches('^[a-z0-9][a-z0-9-]{1,63}$')
+            && c.targetComponentId != componentId
+            && c.localPins is string && c.localPins.size() > 0 && c.localPins.size() <= 64
+            && c.targetPins is string && c.targetPins.size() > 0 && c.targetPins.size() <= 64
+            && ((c.bus == 'GPIO' && !('address' in c) && !('baud' in c))
+              || (c.bus == 'I2C' && !('baud' in c) && c.address is int && c.address >= 8 && c.address <= 119)
+              || (c.bus == 'UART' && !('address' in c) && c.baud is int && c.baud >= 300 && c.baud <= 115200));
+        }
+
+        function componentValid(d) {
+          return d.keys().hasAll(['componentId', 'prototypeId', 'kind', 'model', 'connection'])
+            && d.keys().hasOnly(['componentId', 'prototypeId', 'kind', 'model', 'connection'])
+            && d.componentId == componentId && componentId.matches('^[a-z0-9][a-z0-9-]{1,63}$')
+            && d.prototypeId is string && d.prototypeId.matches('^[a-z0-9][a-z0-9-]{1,47}$')
+            && d.kind in ['MICROCONTROLLER', 'GATEWAY', 'SENSOR', 'DISPLAY', 'LED', 'BUZZER']
+            && d.model is string && d.model.size() > 0 && d.model.size() <= 100
+            && connectionValid(d.connection);
+        }
+
+        allow read, delete: if esPropietario(uid);
+        allow create: if esPropietario(uid) && componentValid(request.resource.data);
+        allow update: if esPropietario(uid) && componentValid(request.resource.data)
+          && request.resource.data.prototypeId == resource.data.prototypeId;
+      }
+
       match /devices/{deviceId} {
         allow read: if esPropietario(uid);
         allow create, update: if esPropietario(uid)

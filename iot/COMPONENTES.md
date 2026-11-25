@@ -1,6 +1,6 @@
 # Identificación del prototipo Voltify
 
-Etiqueta cada elemento con el ID lógico de la tabla. El prefijo `voltify-01` identifica este montaje. Conserva el mismo ID al cambiar el nombre, el cableado, el firmware o las credenciales. Para otro montaje, asigna un prefijo distinto. Registra los ocho componentes en `users/{ownerUid}/iotComponents/{componentId}` con la plantilla [iotComponents.example.json](iotComponents.example.json). La clave de cada registro coincide con `componentId` y todos comparten `prototypeId`.
+Etiqueta cada elemento con el ID lógico de la tabla. El prefijo `voltify-01` identifica este montaje. Conserva el mismo ID al cambiar el nombre, el cableado, el firmware o las credenciales. Para otro montaje, asigna un prefijo distinto. Registra los ocho componentes en Cloud Firestore, `users/{ownerUid}/iotComponents/{componentId}` con la plantilla [iotComponents.example.json](iotComponents.example.json). La clave de cada registro coincide con `componentId` y todos comparten `prototypeId`.
 
 | ID lógico | Componente | Conexión de referencia |
 |---|---|---|
@@ -29,12 +29,12 @@ El registro guarda metadatos y conexiones. Reutiliza el artefacto, `iotLive` y `
 
 Registra en la ficha de montaje el conversor de nivel lógico UART de 5 V a 3,3 V (`voltify-01-level-shifter`), la batería de 9 V (`voltify-01-bateria`), la carga de 100 Ω / 5 W (`voltify-01-carga`), la protoboard (`voltify-01-protoboard`) y el juego de cables (`voltify-01-cableado`) si están presentes. Para las resistencias limitadoras instaladas, usa `voltify-01-res-led-verde`, `voltify-01-res-led-amarillo` y `voltify-01-res-led-rojo` según corresponda. Estos elementos pueden etiquetarse localmente como parte de `voltify-01`. El montaje usa una sola cuenta técnica de Firebase, la del gateway.
 
-### Asociación para futuros comandos (pasos 3 y 4)
+### Asociación de comandos (pasos 3 y 4)
 
-La futura orden de Android deberá incluir `targetComponentId` con el ID exacto del LED o buzzer de la tabla. La vinculación administrativa resuelve el gateway del mismo montaje. El futuro NodeMCU deberá aceptar únicamente los cuatro IDs de actuadores asignados a su montaje y transmitir el ID por UART; el Arduino resolverá la salida D4, D5, D6 o D7 mediante una tabla local fija. El contrato futuro deberá identificar cada orden con un ID único, definir caducidad y confirmación, y fijar la prioridad frente a las alertas locales. Los pines quedan como metadatos del inventario.
+La orden de Android incluye `targetComponentId` con el ID exacto del LED o buzzer de la tabla. La vinculación administrativa resuelve el gateway del mismo montaje. El NodeMCU acepta únicamente los cuatro IDs de actuadores asignados a su montaje y transmite el ID de la orden y una operación de la tabla por UART. El Arduino selecciona la salida D4, D5, D6 o D7 mediante una tabla local fija. Cada orden contiene un ID único, caduca y requiere confirmación del Arduino. Las pruebas manuales conservan las alertas locales. Los pines quedan como metadatos del inventario.
 
-Esta fase entrega la asociación de IDs. El canal de comandos, su autorización, el receptor UART inverso y la actuación remota están pendientes de implementación y prueba.
+El canal de comandos se prueba de forma local. La actuación remota y el retorno UART quedan pendientes de verificación física.
 
 ### Aprovisionamiento pendiente
 
-Tras autorizar el despliegue, comparar y publicar las reglas de RTDB revisadas. Con la cuenta Android del propietario, escribir cada entrada de la plantilla bajo su ruta `iotComponents/{componentId}` mediante un cliente autenticado, o agregar las entradas individualmente en Firebase Console con acceso administrativo. Usar exclusivamente el UID propietario correcto y conservar los hijos existentes. Etiquetar el montaje y añadir `gatewayComponentId` a la vinculación que se cree para la cuenta dedicada. El inventario puede aprovisionarse con los firmwares actuales.
+Tras autorizar el despliegue, comparar y publicar las reglas revisadas. Crear cada entrada de la plantilla como documento de Firestore bajo `iotComponents/{componentId}`, mediante un cliente autenticado del propietario o en Firebase Console con acceso administrativo. Usar exclusivamente el UID propietario correcto y conservar los hijos existentes. Etiquetar el montaje y añadir `gatewayComponentId` a la vinculación que se cree para la cuenta dedicada. El inventario puede aprovisionarse con los firmwares actuales.

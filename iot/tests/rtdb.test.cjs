@@ -10,30 +10,19 @@ const epoch = 1767225600000;
 const rules = fs.readFileSync(path.resolve(__dirname, "../../firebase_database_rules.json"), "utf8");
 
 async function main() {
-  const env = await initializeTestEnvironment({ projectId, database: { rules } });
+  const env = await initializeTestEnvironment({ projectId, database: { rules }, firestore: { rules: fs.readFileSync(path.resolve(__dirname, "../../firestore.rules"), "utf8") } });
   try {
-    const auth = await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: "test-device@example.test",
-        password: "Emulator-only!27",
-        returnSecureToken: true
-      })
-    });
-    assert.equal(auth.status, 200);
-    const { localId } = await auth.json();
-    const signIn = await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: "test-device@example.test",
-        password: "Emulator-only!27",
-        returnSecureToken: true
-      })
-    });
-    assert.equal(signIn.status, 200);
-    const { idToken, refreshToken } = await signIn.json();
+    async function anonymous() {
+      const response = await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnSecureToken: true })
+      });
+      assert.equal(response.status, 200);
+      return response.json();
+    }
+    const { idToken, refreshToken, localId } = await anonymous();
+    const unbound = await anonymous();
     const refreshed = await fetch("http://127.0.0.1:9099/securetoken.googleapis.com/v1/token?key=fake", {
       method: "POST",
       body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken })
@@ -45,7 +34,7 @@ async function main() {
       id: 42, nombre: "Prueba INA219", categoria: "Otro", marca: "", modelo: "",
       potenciaW: 1, activo: true, monitoreando: true, fechaRegistro: 1, tipoFuente: "IOT_REAL"
     };
-    const binding = { enabled: true, ownerUid: "owner", artifactKey: "42", slot: 0 };
+    const binding = { enabled: true, ownerUid: "owner", gatewayComponentId: "voltify-01-nodemcu", artifactKey: "42", slot: 0 };
     const seed = (ref, value) => env.withSecurityRulesDisabled(context => context.database().ref(ref).set(value));
     await seed("/", {
       iotDeviceBindings: { [localId]: binding },
@@ -146,6 +135,8 @@ async function main() {
     console.log("RTDB en vivo: dos muestras por el listener dedicado, un nodo y cero eventos de historial adicionales");
 
     await denied(await put(key, row, ""));
+    await denied(await put(key, row, unbound.idToken));
+    await denied(await put(liveKey, firstLive, unbound.idToken));
     await denied(await put(key.replace("owner", "other"), row));
     await denied(await put(key, { ...row, artefactoId: 43 }));
     await denied(await put(key + "0", row));
@@ -155,7 +146,7 @@ async function main() {
     await denied(await put(key, { ...row, telemetria: { ...row.telemetria, muestraMs: now - 100000 } }));
     await denied(await put("iotDeviceBindings/" + localId + "/extra", true));
     await denied(await put("users/" + localId + "/profile", {
-      nombre: "Placa", correo: "test-device@example.test", telefono: "", comuna: "",
+      nombre: "Placa", correo: "unused@example.test", telefono: "", comuna: "",
       empresa: "", usarTarifaManual: false
     }));
     await denied(await fetch(url("users/owner/artifacts/42")));
@@ -217,46 +208,60 @@ async function main() {
     assert.deepEqual(finalHistory[id], row);
     assert.deepEqual(finalHistory["123"], { ...legacy, id: 123 });
     await assertSucceeds(legacyRef.remove());
+    const mailbox = "users/owner/iotCommands/42";
+    const order = {
+      id: "abcdef0123456789abcdef0123456789",
+      targetComponentId: "voltify-01-led-verde", expiresAt: Date.now() + 12000
+    };
+    const pending = owner.ref(mailbox);
+    await assert.rejects(outsider.ref(mailbox).set(order));
+    await assert.rejects(owner.ref("users/owner/iotCommands/99").set(order));
+    await assert.rejects(pending.set({ ...order, targetComponentId: "voltify-01-arduino-uno" }));
+    await assert.rejects(pending.set({ ...order, expiresAt: Date.now() - 1000 }));
+    await assert.rejects(pending.set({ ...order, expiresAt: Date.now() + 60000 }));
+    await assertSucceeds(pending.set(order));
+    await assert.rejects(pending.set({ ...order, id: "a".repeat(32) }));
+    assert.deepEqual(await (await fetch(url(mailbox))).json(), order);
+    await denied(await fetch(url(mailbox, unbound.idToken)));
+    await denied(await fetch(url("users/owner/iotCommands")));
+    await denied(await fetch(url(mailbox.replace("42", "43"))));
+    await denied(await put(mailbox, order));
+    const ack = mailbox + "/ack";
+    const claim = { id: order.id, deviceUid: localId, state: "CLAIMED" };
+    const executed = { id: order.id, deviceUid: localId, state: "EXECUTED" };
+    await denied(await put(ack, executed));
+    await denied(await put(ack, { ...claim, deviceUid: unbound.localId }));
+    await denied(await put(ack, claim, unbound.idToken));
+    await assert.rejects(owner.ref(ack).set(claim));
+    assert.equal((await put(ack, claim)).status, 200);
+    await denied(await put(ack, claim));
+    await denied(await put(ack, { ...executed, id: "b".repeat(32) }));
+    assert.equal((await put(ack, executed)).status, 200);
+    assert.deepEqual((await peer.ref(ack).once("value")).val(), executed);
+    await denied(await put(ack, executed));
+    await assertSucceeds(pending.set({ ...order, id: "b".repeat(32), targetComponentId: "voltify-01-ina219" }));
+    await denied(await put(ack, executed));
+    console.log("Comandos RTDB: propietario, acceso mínimo, caducidad, reserva única y confirmación verificadas");
+
     const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../iotComponents.example.json"), "utf8"));
     const registry = "users/owner/iotComponents";
-    const unoId = "voltify-01-arduino-uno";
-    const inaId = "voltify-01-ina219";
-    const uno = manifest[unoId];
+    const ownerFs = env.authenticatedContext("owner", { email_verified: true }).firestore();
+    const foreignFs = env.authenticatedContext("other", { email_verified: true }).firestore();
+    const gatewayFs = env.authenticatedContext(localId, { firebase: { sign_in_provider: "anonymous" } }).firestore();
     assert.equal(Object.keys(manifest).length, 8);
-    for (const [componentId, entry] of Object.entries(manifest)) {
-      assert.equal(entry.componentId, componentId);
-      assert.equal(entry.prototypeId, "voltify-01");
-      assert.ok(manifest[entry.connection.targetComponentId]);
-      await assertSucceeds(owner.ref(registry + "/" + componentId).set(entry));
+    for (const [id, component] of Object.entries(manifest)) {
+      await assertSucceeds(ownerFs.doc(registry + "/" + id).set(component));
     }
-    assert.deepEqual((await assertSucceeds(peer.ref(registry).once("value"))).val(), manifest);
-    await assertSucceeds(owner.ref(registry + "/" + unoId + "/model").set("Arduino Uno R3 / revisión"));
-    assert.equal((await peer.ref(registry + "/" + unoId + "/model").once("value")).val(),
-                 "Arduino Uno R3 / revisión");
-
-    await assert.rejects(outsider.ref(registry).once("value"));
-    await assert.rejects(outsider.ref(registry + "/" + unoId).set(uno));
-    await assert.rejects(pendingOwner.ref(registry + "/" + unoId).set(uno));
-    await denied(await put(registry + "/" + unoId, uno));
-    await denied(await put("users/" + localId + "/iotComponents/" + unoId, uno));
-    await denied(await fetch(url(registry)));
-    await denied(await fetch(url(registry, "")));
-    const verifiedGateway = env.authenticatedContext(localId, { email_verified: true }).database();
-    await assert.rejects(verifiedGateway.ref("users/" + localId + "/iotComponents/" + unoId).set(uno));
-
-    await assert.rejects(owner.ref(registry + "/otro-id").set(uno));
-    await assert.rejects(owner.ref(registry + "/" + unoId + "/prototypeId").set("voltify-02"));
-    await assert.rejects(owner.ref(registry + "/" + unoId + "/connection/targetComponentId").set(unoId));
-    await assert.rejects(owner.ref(registry + "/" + unoId + "/connection/address").set(64));
-    await assert.rejects(owner.ref(registry + "/" + inaId + "/connection/address").set(128));
-    await assert.rejects(owner.ref(registry + "/" + inaId + "/connection/address").remove());
-    await assert.rejects(owner.ref(registry + "/" + unoId + "/action").set("ON"));
-    await assert.rejects(owner.ref("users/owner/iotCommands/example").set({ targetComponentId: "voltify-01-led-verde" }));
-    await denied(await fetch(url("users/owner/iotCommands/example")));
-
-    await assertSucceeds(owner.ref(registry + "/" + unoId).remove());
-    assert.equal((await peer.ref(registry).once("value")).numChildren(), 7);
-    console.log("Inventario: 8 IDs, CRUD del propietario, aislamiento y validación; canal de comandos cerrado");
+    const uno = registry + "/voltify-01-arduino-uno";
+    assert.equal((await ownerFs.collection(registry).get()).size, 8);
+    await assertSucceeds(ownerFs.doc(uno).update({ model: "Arduino Uno R3 revisión" }));
+    await assert.rejects(ownerFs.doc(uno).update({ prototypeId: "voltify-02" }));
+    await assert.rejects(foreignFs.doc(uno).get());
+    await assert.rejects(gatewayFs.doc(uno).get());
+    await assert.rejects(gatewayFs.doc(uno).set(manifest["voltify-01-arduino-uno"]));
+    await assert.rejects(owner.ref(uno).set(manifest["voltify-01-arduino-uno"]));
+    await assertSucceeds(ownerFs.doc(uno).delete());
+    console.log("Firestore: ocho IDs, esquema, CRUD e aislamiento verificados; inventario RTDB cerrado");
     console.log("RTDB/Auth: autenticación, permisos e historial físico sin duplicados; perfil, CRUD, metas y simulación compatibles entre dos sesiones");
   } finally {
     await env.cleanup();

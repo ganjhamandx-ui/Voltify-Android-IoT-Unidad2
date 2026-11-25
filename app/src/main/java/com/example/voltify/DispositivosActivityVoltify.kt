@@ -15,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.voltify.model.ArtefactoLocal
 import com.example.voltify.model.MonitoreoLecturaActual
+import com.example.voltify.model.IotTarget
+import kotlinx.coroutines.CancellationException
 import com.example.voltify.model.TipoFuenteMonitoreo
 import com.example.voltify.ui.artefactos.ArtefactosViewModel
 import kotlinx.coroutines.delay
@@ -180,6 +182,9 @@ class DispositivosActivityVoltify : AppCompatActivity() {
                     val telemetry = makeText(getString(R.string.iot_waiting_readings), 11f, R.color.voltify_cyan)
                     iotViews[artifact.id] = telemetry
                     panel.addView(telemetry)
+                    val controls = makeActionButton("Controles IoT")
+                    controls.setOnClickListener { showIotControls(artifact.id) }
+                    panel.addView(controls)
                 }
 
                 val retireButton = makeActionButton("Retirar", danger = true).apply {
@@ -216,6 +221,38 @@ class DispositivosActivityVoltify : AppCompatActivity() {
 
         updateLiveReadingViews(viewModel.liveReadings.value)
         updateIotReadingViews()
+    }
+
+    private fun showIotControls(artifactId: Int) {
+        val choices = IotTarget.entries
+        AlertDialog.Builder(this)
+            .setTitle("Controles IoT")
+            .setItems(choices.map { it.label }.toTypedArray()) { _, index ->
+                val target = choices[index]
+                if (target == IotTarget.INA219) {
+                    sendIotCommand(artifactId, target)
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle(target.label)
+                        .setMessage("Se activará brevemente la salida si el prototipo está conectado.")
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Probar") { _, _ -> sendIotCommand(artifactId, target) }
+                        .show()
+                }
+            }.show()
+    }
+
+    private fun sendIotCommand(artifactId: Int, target: IotTarget) {
+        lifecycleScope.launch {
+            try {
+                val confirmed = viewModel.sendIotCommand(artifactId, target)
+                toast(if (confirmed) "Arduino confirmó la orden" else "Orden sin confirmación")
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                toast("No fue posible enviar la orden. Revisa la conexión y el aprovisionamiento.")
+            }
+        }
     }
 
     private fun updateIotReadingViews() {

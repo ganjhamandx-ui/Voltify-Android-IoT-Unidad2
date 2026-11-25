@@ -18,7 +18,7 @@
         "consumptions": {
           "$id": {
             ".validate": "newData.hasChildren(['id','artefactoId','artefactoNombre','artefactoCategoria','artefactoMarca','artefactoModelo','consumoKwh','fecha','tipoFuente']) && newData.child('id').isNumber() && newData.child('artefactoId').isNumber() && newData.child('artefactoNombre').isString() && newData.child('consumoKwh').isNumber() && newData.child('consumoKwh').val() >= 0 && newData.child('consumoKwh').val() <= 100000 && newData.child('fecha').isNumber() && (newData.child('tipoFuente').val() === 'SIMULADA' || newData.child('tipoFuente').val() === 'IOT_REAL')",
-            ".write": "(auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true && !data.child('telemetria').exists() && !newData.child('telemetria').exists() && (!newData.exists() || newData.child('id').val() < 1900000000)) || (auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'password' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('slot').val() >= 0 && root.child('iotDeviceBindings').child(auth.uid).child('slot').val() < 24 && !data.exists() && newData.exists() && newData.child('telemetria').exists() && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('monitoreando').val() === true && newData.child('artefactoId').val() === root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('id').val() && newData.child('tipoFuente').val() === 'IOT_REAL' && newData.child('fecha').val() % 30000 === 0 && ((newData.child('fecha').val() - 1767225600000) / 30000) >= 0 && ((newData.child('fecha').val() - 1767225600000) / 30000) < 10000000 && newData.child('id').val() === 1900000000 + root.child('iotDeviceBindings').child(auth.uid).child('slot').val() * 10000000 + ((newData.child('fecha').val() - 1767225600000) / 30000) && $id === '' + newData.child('id').val() && newData.child('telemetria/muestraMs').val() >= newData.child('fecha').val() && newData.child('telemetria/muestraMs').val() < newData.child('fecha').val() + 30000 && newData.child('telemetria/muestraMs').val() >= now - 90000 && newData.child('telemetria/muestraMs').val() <= now && newData.child('consumoKwh').val() <= 0.002)",
+            ".write": "(auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true && !data.child('telemetria').exists() && !newData.child('telemetria').exists() && (!newData.exists() || newData.child('id').val() < 1900000000)) || (auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'anonymous' && root.child('iotDeviceBindings').child(auth.uid).child('gatewayComponentId').val() === 'voltify-01-nodemcu' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('slot').val() >= 0 && root.child('iotDeviceBindings').child(auth.uid).child('slot').val() < 24 && !data.exists() && newData.exists() && newData.child('telemetria').exists() && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('monitoreando').val() === true && newData.child('artefactoId').val() === root.child('users').child($uid).child('artifacts').child(root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val()).child('id').val() && newData.child('tipoFuente').val() === 'IOT_REAL' && newData.child('fecha').val() % 30000 === 0 && ((newData.child('fecha').val() - 1767225600000) / 30000) >= 0 && ((newData.child('fecha').val() - 1767225600000) / 30000) < 10000000 && newData.child('id').val() === 1900000000 + root.child('iotDeviceBindings').child(auth.uid).child('slot').val() * 10000000 + ((newData.child('fecha').val() - 1767225600000) / 30000) && $id === '' + newData.child('id').val() && newData.child('telemetria/muestraMs').val() >= newData.child('fecha').val() && newData.child('telemetria/muestraMs').val() < newData.child('fecha').val() + 30000 && newData.child('telemetria/muestraMs').val() >= now - 90000 && newData.child('telemetria/muestraMs').val() <= now && newData.child('consumoKwh').val() <= 0.002)",
             "id": {},
             "artefactoId": {},
             "consumoKwh": {},
@@ -109,47 +109,37 @@
             "$other": {
               ".validate": false
             },
-            ".write": "auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'password' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val() === $artifactKey && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && newData.exists() && newData.child('muestraMs').val() >= now - 10000 && newData.child('muestraMs').val() <= now + 2000 && (!data.exists() || newData.child('muestraMs').val() > data.child('muestraMs').val())"
+            ".write": "auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'anonymous' && root.child('iotDeviceBindings').child(auth.uid).child('gatewayComponentId').val() === 'voltify-01-nodemcu' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val() === $artifactKey && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && newData.exists() && newData.child('muestraMs').val() >= now - 10000 && newData.child('muestraMs').val() <= now + 2000 && (!data.exists() || newData.child('muestraMs').val() > data.child('muestraMs').val())"
           }
         },
-        "iotComponents": {
-          "$componentId": {
-            ".write": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true",
-            ".validate": "newData.hasChildren(['componentId','prototypeId','kind','model','connection']) && $componentId.matches(/^[a-z0-9][a-z0-9-]{1,63}$/) && newData.child('componentId').val() === $componentId && (!data.exists() || newData.child('prototypeId').val() === data.child('prototypeId').val())",
-            "componentId": {
-              ".validate": "newData.isString()"
+        "iotCommands": {
+          "$artifactKey": {
+            ".read": "auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'anonymous' && root.child('iotDeviceBindings').child(auth.uid).child('gatewayComponentId').val() === 'voltify-01-nodemcu' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val() === $artifactKey && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL'",
+            ".write": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL' && newData.exists() && !newData.child('ack').exists() && (!data.exists() || ((data.child('expiresAt').val() <= now || data.child('ack/state').val() === 'EXECUTED') && newData.child('id').val() !== data.child('id').val())) && newData.child('expiresAt').val() > now && newData.child('expiresAt').val() <= now + 15000",
+            ".validate": "newData.hasChildren(['id','targetComponentId','expiresAt'])",
+            "id": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
             },
-            "prototypeId": {
-              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9][a-z0-9-]{1,47}$/)"
+            "targetComponentId": {
+              ".validate": "newData.val() === 'voltify-01-ina219' || newData.val() === 'voltify-01-led-verde' || newData.val() === 'voltify-01-led-amarillo' || newData.val() === 'voltify-01-led-rojo' || newData.val() === 'voltify-01-buzzer'"
             },
-            "kind": {
-              ".validate": "newData.val() === 'MICROCONTROLLER' || newData.val() === 'GATEWAY' || newData.val() === 'SENSOR' || newData.val() === 'DISPLAY' || newData.val() === 'LED' || newData.val() === 'BUZZER'"
+            "expiresAt": {
+              ".validate": "newData.isNumber()"
             },
-            "model": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
-            },
-            "connection": {
-              ".validate": "newData.hasChildren(['bus','targetComponentId','localPins','targetPins']) && newData.child('targetComponentId').val() !== $componentId && ((newData.child('bus').val() === 'I2C' && newData.child('address').exists() && !newData.child('baud').exists()) || (newData.child('bus').val() === 'UART' && newData.child('baud').exists() && !newData.child('address').exists()) || (newData.child('bus').val() === 'GPIO' && !newData.child('baud').exists() && !newData.child('address').exists()))",
-              "bus": {
-                ".validate": "newData.val() === 'I2C' || newData.val() === 'UART' || newData.val() === 'GPIO'"
+            "ack": {
+              ".write": "auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'anonymous' && root.child('iotDeviceBindings').child(auth.uid).child('gatewayComponentId').val() === 'voltify-01-nodemcu' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val() === $artifactKey && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('iotCommands').child($artifactKey).child('expiresAt').val() > now && newData.exists() && newData.child('id').val() === root.child('users').child($uid).child('iotCommands').child($artifactKey).child('id').val() && ((!data.exists() && newData.child('state').val() === 'CLAIMED') || (data.child('id').val() === newData.child('id').val() && data.child('state').val() === 'CLAIMED' && newData.child('state').val() === 'EXECUTED')) && newData.child('deviceUid').val() === auth.uid && (!data.exists() || data.child('deviceUid').val() === auth.uid)",
+              ".validate": "newData.hasChildren(['id','state','deviceUid'])",
+              "id": {
+                ".validate": "newData.isString()"
               },
-              "targetComponentId": {
-                ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9][a-z0-9-]{1,63}$/)"
-              },
-              "localPins": {
-                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
-              },
-              "targetPins": {
-                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
-              },
-              "address": {
-                ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 8 && newData.val() <= 119"
-              },
-              "baud": {
-                ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 300 && newData.val() <= 115200"
+              "state": {
+                ".validate": "newData.val() === 'CLAIMED' || newData.val() === 'EXECUTED'"
               },
               "$other": {
                 ".validate": false
+              },
+              "deviceUid": {
+                ".validate": "newData.isString()"
               }
             },
             "$other": {

@@ -268,6 +268,24 @@ class FirebaseGateway(context: Context) {
         }
     }
 
+    suspend fun sendIotCommand(uid: String, artifactId: Int, target: String): Boolean =
+        kotlinx.coroutines.withTimeoutOrNull(16_000L) {
+            val id = java.util.UUID.randomUUID().toString().replace("-", "")
+            val command = userRef(uid).child("iotCommands").child(artifactId.toString())
+            val expiresAt = System.currentTimeMillis() + 12_000L
+            check(currentUid() == uid) { "Sesión de Firebase cambiada" }
+            command.setValue(mapOf("id" to id, "targetComponentId" to target, "expiresAt" to expiresAt)).awaitTask()
+            while (currentUid() == uid && System.currentTimeMillis() < expiresAt) {
+                val row = command.get().awaitTask()
+                if (row.child("id").value != id) return@withTimeoutOrNull false
+                if (row.child("ack/id").value == id && row.child("ack/state").value == "EXECUTED") {
+                    return@withTimeoutOrNull true
+                }
+                kotlinx.coroutines.delay(750)
+            }
+            false
+        } ?: false
+
     class EmailNotVerifiedException : IllegalStateException("EMAIL_NOT_VERIFIED")
 
     private suspend fun <T> Task<T>.awaitTask(): T = suspendCancellableCoroutine { continuation ->

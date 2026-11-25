@@ -1,82 +1,55 @@
-# Voltify físico con Firebase Realtime Database
+# Voltify IoT físico · Unidades 3 y 4
 
-## Qué se integra
+Arduino Uno R3 e INA219 → UART a 9600 → NodeMCU ESP8266 → HTTPS → Firebase RTDB → Android `cl.voltify.app`. Los sketches de revisión se conservan como referencia. El firmware bidireccional del Uno está en `firmware/arduino/Voltify_Arduino_Bidirectional`.
 
-Arduino Uno R3 e INA219 → UART a 9600, RX D2 / TX D1 del NodeMCU → Wi-Fi de 2,4 GHz → HTTPS → Realtime Database → Voltify Android. Los sketches de revisión se conservaron tal como están publicados en `main`. Son revisiones de código fuente. Los respaldos binarios del firmware grabado permanecen separados.
+## Distribución de datos
 
-El sketch nuevo valida `V`, `I`, `P`, `POR`, `EST`, `E` y `C` en el orden del protocolo existente. Publica la última trama válida aproximadamente cada dos segundos y guarda un registro de historial por bloque UTC de 30 segundos:
+- **Firebase Auth** identifica a los usuarios Android mediante el correo verificado. La identidad técnica del NodeMCU usa el proveedor anónimo y una vinculación administrativa, con una credencial renovable exclusiva de la placa.
+- **Cloud Firestore** conserva perfiles y documentos de dispositivos en las rutas existentes. Los ocho componentes se aprovisionan de la plantilla en `users/{ownerUid}/iotComponents/{componentId}`. Android consulta Firestore antes de enviar órdenes a esos destinos. El cliente y las reglas nuevas ya no usan la versión anterior del inventario en RTDB. Ante datos heredados, revisar y respaldar antes de migrarlos. Este cambio no borra registros.
+- **Realtime Database** conserva `users/{ownerUid}/iotLive/{artifactKey}` (última lectura, objetivo de 2 s) y `users/{ownerUid}/consumptions/{id}` (bloques de 30 s). El bloque contiene solo el incremento plausible de energía y recibe un ID fijo por slot y bloque. Las lecturas físicas siguen marcadas `IOT_REAL`. Se preservan las operaciones `SIMULADA`.
 
-```text
-https://voltify-e51f9-default-rtdb.firebaseio.com/
-  users/{ownerUid}/iotLive/{artifactKey}
-    muestraMs, voltajeV, corrienteMa, potenciaW, porcentaje, estado
-    energiaTotalKwh, costoTotalClp
-  users/{ownerUid}/consumptions/{id}
-    id, artefactoId, artefactoNombre, artefactoCategoria, artefactoMarca, artefactoModelo
-    consumoKwh, fecha, tipoFuente = IOT_REAL
-    telemetria/
-      muestraMs, voltajeV, corrienteMa, potenciaW, porcentaje, estado
-      energiaTotalKwh, costoTotalClp
-```
+## Preparación de Firebase · requiere autorización
 
-`fecha` es el inicio del bloque y `muestraMs` es el instante en que el ESP8266 procesó la trama. Ambos son milisegundos Unix. `consumoKwh` suma únicamente diferencias consecutivas plausibles del contador `E`. Un reinicio del Arduino, un salto implausible o una discontinuidad superior a 15 segundos reinicia la referencia. El acumulado y el costo que muestra la tarjeta corresponden a la placa. Los reportes Android mantienen su cálculo a partir de `consumoKwh` y su tarifa.
+1. En `voltify-e51f9`, respaldar y comparar las reglas publicadas, revisar permisos heredados y comprobar si App Check para RTDB exige atestación al cliente REST. Conservar el acceso de Android. No deshabilitar App Check para sortear restricciones.
+2. Habilitar el proveedor **Anónimo** en Firebase Authentication. En proyectos con Identity Platform, revisar la limpieza automática de cuentas anónimas de más de 30 días antes de usar esta identidad como persistente.
+3. Crear **una sola vez** la identidad técnica, fuera del firmware y sin correo, mediante el endpoint documentado signUp con solo `returnSecureToken: true`. Ejemplo de PowerShell desde la raíz, tras autorizar esa escritura. Definir `VOLTIFY_CLIENT_API_KEY` en la sesión local con una clave cliente del mismo proyecto que permita Identity Toolkit y Secure Token.
 
-El ID es `1900000000 + slot × 10000000 + bloque`, donde el bloque cuenta intervalos de 30 segundos desde 2026-01-01 UTC. Los slots 0 a 23 son únicos **por propietario** durante la vida del historial. El PUT usa el mismo ID en cada reintento y las reglas solo autorizan la creación. Esto evita que un reintento, un reinicio o dos teléfonos sumen otra vez el bloque. El rango cubre aproximadamente 9,5 años desde la fecha de referencia. Antes de aprovisionar, comprobar que ese rango esté libre de IDs históricos en el propietario.
+   ```powershell
+   New-Item -ItemType Directory -Force iot/build | Out-Null
+   $voltifyPrivateFile = Join-Path (Get-Location) 'iot/build/anonymous-device.local.json'
+   if (Test-Path -LiteralPath $voltifyPrivateFile) { throw 'Ya hay credenciales locales; no crees otra identidad.' }
+   $voltifyEndpoint = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + $env:VOLTIFY_CLIENT_API_KEY
+   Invoke-RestMethod -Method Post -Uri $voltifyEndpoint -ContentType 'application/json' -Body '{"returnSecureToken":true}' |
+       Select-Object localId,refreshToken |
+       ConvertTo-Json -Compress |
+       Set-Content -LiteralPath $voltifyPrivateFile -Encoding utf8
+   ```
 
-Android escucha `iotLive` por separado del historial. Cada artefacto ocupa un solo nodo que se sobrescribe con muestras más nuevas. La pantalla **Dispositivos** actualiza la lectura desde ese listener y vuelve a indicar espera si la muestra supera 8 segundos. El canal en vivo no modifica el historial: los incrementos se leen por el listener de consumos existente y Android no reenvía las muestras físicas.
+4. En RTDB agregar `/iotDeviceBindings/{deviceUid}`, donde `deviceUid` es `localId`. Configurar `enabled: true`, `ownerUid` del propietario, `artifactKey` como texto decimal, `slot` entero libre de 0 a 23 y `gatewayComponentId: "voltify-01-nodemcu"`. Asignar una sola vinculación activa por gateway/artefacto. Usar un artefacto activo con fuente `IOT_REAL`. Conservar el slot histórico para el mismo artefacto al rotar la credencial y no reutilizarlo para otro artefacto.
+5. Cargar los ocho documentos estáticos en Firestore sin sustituir las colecciones existentes. Publicar las reglas revisadas de Firestore y RTDB únicamente después de aprobarlas y probarlas con el emulador. Los clientes anónimos sin vinculación carecen de permisos de telemetría y comandos.
+6. Copiar `VoltifyConfig.example.h` a `VoltifyConfig.local.h` y completar Wi-Fi, API key, `DEVICE_UID` con `localId`, `DEVICE_REFRESH_TOKEN`, propietario, artefacto, slot y metadatos históricos. Restringir el acceso al archivo privado y al binario. El token de arranque persiste en el firmware y los tokens renovados se conservan en RAM. Si Firebase invalida o sustituye el token de arranque, se requiere reprovisión. Para revocar, deshabilitar primero la vinculación y después deshabilitar o eliminar la identidad técnica. Nunca distribuir los archivos con credenciales.
 
-## Aprovisionamiento pendiente en Firebase Console
+El firmware valida TLS con raíces GTS y sincroniza hora con SNTP. Conserva un bloque pendiente y descarta muestras caducadas. Durante cortes prolongados puede haber huecos. El sondeo de órdenes y las escrituras comparten una conexión HTTPS cuando el servidor permite reutilizarla. La latencia de TLS, la recepción UART y el heap real se verifican en placa. [Firebase Auth REST](https://firebase.google.com/docs/reference/rest/auth/) · [Cuentas anónimas y limpieza automática](https://firebase.google.com/docs/auth/android/anonymous-auth)
 
-Ejecutar estos pasos solo con autorización para modificar el proyecto `voltify-e51f9`.
+## Canal de retorno
 
-1. Respaldar las reglas RTDB publicadas y compararlas con `firebase_database_rules.json`. Integrar el cambio de reglas sobre la configuración vigente y probar el resultado antes de publicarlo. Cualquier permiso de lectura o escritura concedido en un ancestro se propaga a sus descendientes. Revisar especialmente `/`, `/users` y `/users/{uid}`. Confirmar también que Firestore exige correo verificado para su acceso por usuario y revisar si App Check impone requisitos al cliente REST.
-2. Usar un artefacto de prueba del propietario con fuente **IoT real**. Registrar su clave decimal e ID numérico de `/users/{ownerUid}/artifacts/{artifactKey}`. Dejar sus nombres y metadatos listos para copiar en la configuración local.
-3. Confirmar que Email/Password está habilitado. En Authentication → Usuarios, crear una cuenta exclusiva para el ESP8266 con alias dedicado de control del proyecto y contraseña aleatoria robusta. Mantener el correo **sin verificar**. Anotar el UID de esa cuenta y por separado el UID del propietario. La cuenta del propietario sigue autenticándose en Android.
-4. En Realtime Database → Datos, crear individualmente `/iotDeviceBindings/{deviceUid}` con `enabled` booleano, `ownerUid` texto, `artifactKey` texto y `slot` numérico entero de 0 a 23. Usar un slot libre para ese propietario. Las reglas de cliente no permiten leer ni escribir las vinculaciones. Para revocar acceso, poner `enabled` en `false` y deshabilitar la cuenta de la placa en Authentication. Conservar la vinculación deshabilitada y el slot histórico.
-5. Aplicar las reglas revisadas únicamente cuando lo autorice el responsable del proyecto. Verificar con el emulador antes de repetir en producción. Si el API key Android existente está restringido al paquete Android, usar una clave cliente del mismo proyecto compatible con Identity Toolkit y Secure Token para el ESP8266.
+En un artefacto físico monitoreado, **Dispositivos → Controles IoT** permite solicitar una lectura INA219 o confirmar una prueba individual de un LED o del buzzer. Android escribe una orden de 12 segundos en el buzón `users/{ownerUid}/iotCommands/{artifactKey}`. La orden contiene `id`, `targetComponentId` y `expiresAt`. La placa vinculada reserva la orden con `CLAIMED` y solo entonces envía la trama UART. Tras recibir confirmación CRC válida del Uno para ese ID, registra `EXECUTED` con su UID. Las reglas impiden reclamar dos veces, falsificar el resultado desde Android o confirmar una orden reemplazada o vencida.
 
-La cuenta dedicada permite aprovisionar el prototipo sin servidor adicional y limita la escritura a nuevos bloques de consumo y a la última lectura de un solo artefacto IoT vinculado. Firebase Auth REST devuelve un ID token y un refresh token. El ESP8266 renueva el ID token antes de su expiración, y ante un fallo de renovación por credenciales inválidas vuelve a iniciar sesión con la cuenta dedicada. Diagnostica por códigos HTTP sin imprimir credenciales ni URLs autenticadas. [Firebase Auth REST](https://firebase.google.com/docs/reference/rest/auth/) · [Autenticación de RTDB REST](https://firebase.google.com/docs/database/rest/auth)
+Una reserva sin confirmación no se reenvía por seguridad. Un corte después de reservar puede dejar una orden sin confirmar, incluso si el Arduino llegó a recibirla. El operador puede reintentar con una orden nueva cuando venza. El ESP exige CRC de telemetría por defecto. Durante una transición controlada, la opción local `ALLOW_LEGACY_UART` admite el sketch antiguo. El nuevo Uno agrega CRC-16 a la telemetría y ambos sentidos de los comandos usan CRC-16. La prueba manual solo agrega un pulso nominal de 500 ms y conserva el estado automático de los LED y buzzer.
 
-## Preparación de la placa
+## Compilación y prueba física
 
-1. Abrir `firmware/esp8266/Voltify_NodeMCU_Firebase/Voltify_NodeMCU_Firebase.ino` en Arduino IDE. Usar **NodeMCU 1.0 (ESP-12E Module)** (`esp8266:esp8266:nodemcuv2`), ESP8266 core 3.1.2 y ArduinoJson 7.4.2. EspSoftwareSerial 8.0.1 viene con el core.
-2. Copiar `VoltifyConfig.example.h` al mismo directorio como `VoltifyConfig.local.h`. Completar Wi-Fi de 2,4 GHz, API key cliente, credenciales y UID de la placa, UID del dueño, artefacto y slot. Copiar los cuatro campos de descripción del artefacto para mantener sus etiquetas históricas. Git ignora el archivo local. El binario compilado con datos reales contiene la contraseña de la placa y debe quedar local.
-3. Compilar con **Verificar**. El firmware espera hora SNTP y valida TLS contra GTS Root R1–R4, incluidos en el código. La red debe resolver los hosts de Firebase y permitir SNTP y HTTPS. Si el operador de los endpoints cambia sus raíces, actualizar las anclas desde el repositorio oficial y recompilar. [Google Trust Services](https://pki.goog/repository/)
-4. Cuando estén autorizadas la programación del ESP8266 y la actualización de Android, instalar el build de integración mediante el procedimiento acordado para preservar los datos de la aplicación. Si Android rechaza la actualización por la firma, detenerse y usar una compilación compatible con la firma de la instalación existente.
-
-El ESP8266 conserva un bloque abierto y un solo bloque pendiente. El canal en vivo toma una trama de hasta cinco segundos de antigüedad y no encola muestras. Las dos rutas de RTDB comparten la conexión HTTPS persistente cuando el servidor lo permite. Antes de autenticar o renovar, el firmware libera esa conexión y sus búferes. El monitor serie muestra el heap libre y el mayor bloque libre al publicar el historial o ante errores de RTDB. La latencia y el heap dinámico se verifican en la placa durante la prueba autorizada. Si la red se interrumpe, un bloque reciente reemplaza al anterior pendiente y las muestras de más de 90 segundos se descartan. El cliente HTTPS síncrono puede interrumpir temporalmente el procesamiento de UART durante la conexión o la respuesta. El búfer tiene tamaño fijo y se descartan las tramas acumuladas durante operaciones largas porque UART carece de hora de origen. Tras una caída larga puede haber huecos en el historial. La resolución de `E` es de 0,000001 kWh y con cargas pequeñas pueden aparecer bloques de incremento cero. En uso continuo se generan hasta 2.880 filas históricas por artefacto al día. El listener de historial conserva el comportamiento anterior y la vista en vivo solo consume la rama compacta. Limitar la duración de las sesiones del prototipo.
-
-## Una prueba física controlada
-
-1. Con la batería desconectada, confirmar el proyecto, los IDs y la vinculación. Activar monitoreo del artefacto de prueba en Android y verificar en RTDB que `monitoreando` es `true`.
-2. Tras autorizar el paso de programación, cargar el nuevo sketch **solo a COM4**. Abrir el Monitor Serial de COM4 a 9600 y esperar Wi-Fi, Auth HTTP 200 y RTDB HTTP 204. Mantener el Arduino de COM3 con el firmware instalado.
-3. Energizar el montaje de prueba. Durante un minuto, comprobar en `iotLive/{artifactKey}` y en **Dispositivos** que la hora y las lecturas avanzan aproximadamente cada 1–3 segundos con Wi-Fi estable. Confirmar que cada bloque de 30 segundos produce un solo registro en `consumptions` y que su `consumoKwh` corresponde al incremento. Registrar el heap libre y el mayor bloque libre en los mensajes HTTP 204 del historial.
-4. Desconectar la batería de prueba. Con el INA219 y los microcontroladores aún encendidos, comprobar que la siguiente muestra refleja el cambio de carga. En la misma sesión, interrumpir brevemente el Wi-Fi de la placa y comprobar que Android muestra espera tras caducar la lectura y vuelve a mostrar datos al reconectar. Confirmar que no aparecen bloques duplicados. Detener el monitoreo y deshabilitar la vinculación al terminar la demostración.
-
-## Verificaciones locales
-
-Desde la raíz del repositorio, con JDK de Android Studio, Arduino CLI y los paquetes instalados:
+Compilar con `--libraries iot/firmware/libraries`. Usar `arduino:avr:uno` para el sketch bidireccional y `esp8266:esp8266:nodemcuv2` para el firmware Firebase, con ArduinoJson 7.4.2 para ESP8266. También se pueden instalar las bibliotecas del directorio compartido en el sketchbook de Arduino IDE. El proyecto emulado se ejecuta desde la raíz con:
 
 ```powershell
-.\gradlew.bat --offline assembleDebug testDebugUnitTest --tests com.example.voltify.LecturaIotTest
-arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 iot/firmware/esp8266/Voltify_NodeMCU_Firebase
+node iot/build/emulator/node_modules/firebase-tools/lib/bin/firebase.js --config firebase.iot-emulator.json --project demo-voltify-iot emulators:exec --only auth,database,firestore 'node iot/tests/rtdb.test.cjs'
 ```
 
-Pruebas del parser, agregación, salida JSON y clasificación HTTP con un compilador C++17 y los headers de ArduinoJson:
+Solo tras autorizar el despliegue físico:
 
-```powershell
-New-Item -ItemType Directory -Force iot/build | Out-Null
-c++ -std=c++17 -I RUTA_A_ARDUINOJSON/src iot/tests/telemetry_test.cpp -o iot/build/telemetry_test.exe
-.\iot\build\telemetry_test.exe
-```
+1. Con la batería de prueba desconectada, revisar tierra común y el sentido de ambos canales del conversor. Confirmar en particular **NodeMCU TX D1 → Arduino RX D2** a través del canal adecuado del conversor. El trayecto previamente aprobado del Uno al NodeMCU no acredita el retorno. No conectar una salida de 5 V a un GPIO del ESP8266.
+2. Con respaldo y autorización para ambos cambios, cargar el sketch bidireccional en COM3 y el de Firebase en COM4. Instalar Android mediante actualización de firma compatible. Activar el monitoreo del artefacto de prueba.
+3. Confirmar el flujo INA219 → Android, la cadencia en vivo y una fila histórica por bloque. Solicitar una lectura y comprobar el nuevo dato y su confirmación. Probar cada salida individualmente y comprobar que una alerta automática elevada sigue activa durante una prueba manual.
+4. En la misma sesión, hacer un corte breve de Wi-Fi y verificar recuperación, expiración de una orden pendiente, ausencia de repeticiones y de bloques históricos duplicados. Registrar latencia y heap libre durante HTTPS. Al terminar, detener el monitoreo.
 
-Pruebas de Auth y Realtime Database con un proyecto de emulador:
-
-```powershell
-npm install --prefix iot/build/emulator firebase-tools @firebase/rules-unit-testing firebase
-node iot/build/emulator/node_modules/firebase-tools/lib/bin/firebase.js --config firebase.iot-emulator.json --project demo-voltify-iot emulators:exec --only auth,database 'node iot/tests/rtdb.test.cjs'
-```
-
-## Identificación del montaje
-
-Consulta [Identificación del prototipo Voltify](COMPONENTES.md) y la plantilla [iotComponents.example.json](iotComponents.example.json) para aprovisionar el inventario lógico.
+[Identificación e inventario](COMPONENTES.md)

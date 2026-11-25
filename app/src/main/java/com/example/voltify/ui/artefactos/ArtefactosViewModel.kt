@@ -128,6 +128,9 @@ class ArtefactosViewModel(application: Application) : BaseVoltifyViewModel(appli
         _liveReadings.value = emptyMap()
     }
 
+    suspend fun sendIotCommand(id: Int, target: com.example.voltify.model.IotTarget): Boolean =
+        repository.sendIotCommand(id, target)
+
     fun latestIotReadings() = repository.latestIotReadings()
 
     fun liveReadingFor(id: Int): MonitoreoLecturaActual? = _liveReadings.value[id]
