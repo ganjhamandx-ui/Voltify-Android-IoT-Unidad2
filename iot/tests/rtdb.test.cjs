@@ -217,6 +217,46 @@ async function main() {
     assert.deepEqual(finalHistory[id], row);
     assert.deepEqual(finalHistory["123"], { ...legacy, id: 123 });
     await assertSucceeds(legacyRef.remove());
+    const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../iotComponents.example.json"), "utf8"));
+    const registry = "users/owner/iotComponents";
+    const unoId = "voltify-01-arduino-uno";
+    const inaId = "voltify-01-ina219";
+    const uno = manifest[unoId];
+    assert.equal(Object.keys(manifest).length, 8);
+    for (const [componentId, entry] of Object.entries(manifest)) {
+      assert.equal(entry.componentId, componentId);
+      assert.equal(entry.prototypeId, "voltify-01");
+      assert.ok(manifest[entry.connection.targetComponentId]);
+      await assertSucceeds(owner.ref(registry + "/" + componentId).set(entry));
+    }
+    assert.deepEqual((await assertSucceeds(peer.ref(registry).once("value"))).val(), manifest);
+    await assertSucceeds(owner.ref(registry + "/" + unoId + "/model").set("Arduino Uno R3 / revisión"));
+    assert.equal((await peer.ref(registry + "/" + unoId + "/model").once("value")).val(),
+                 "Arduino Uno R3 / revisión");
+
+    await assert.rejects(outsider.ref(registry).once("value"));
+    await assert.rejects(outsider.ref(registry + "/" + unoId).set(uno));
+    await assert.rejects(pendingOwner.ref(registry + "/" + unoId).set(uno));
+    await denied(await put(registry + "/" + unoId, uno));
+    await denied(await put("users/" + localId + "/iotComponents/" + unoId, uno));
+    await denied(await fetch(url(registry)));
+    await denied(await fetch(url(registry, "")));
+    const verifiedGateway = env.authenticatedContext(localId, { email_verified: true }).database();
+    await assert.rejects(verifiedGateway.ref("users/" + localId + "/iotComponents/" + unoId).set(uno));
+
+    await assert.rejects(owner.ref(registry + "/otro-id").set(uno));
+    await assert.rejects(owner.ref(registry + "/" + unoId + "/prototypeId").set("voltify-02"));
+    await assert.rejects(owner.ref(registry + "/" + unoId + "/connection/targetComponentId").set(unoId));
+    await assert.rejects(owner.ref(registry + "/" + unoId + "/connection/address").set(64));
+    await assert.rejects(owner.ref(registry + "/" + inaId + "/connection/address").set(128));
+    await assert.rejects(owner.ref(registry + "/" + inaId + "/connection/address").remove());
+    await assert.rejects(owner.ref(registry + "/" + unoId + "/action").set("ON"));
+    await assert.rejects(owner.ref("users/owner/iotCommands/example").set({ targetComponentId: "voltify-01-led-verde" }));
+    await denied(await fetch(url("users/owner/iotCommands/example")));
+
+    await assertSucceeds(owner.ref(registry + "/" + unoId).remove());
+    assert.equal((await peer.ref(registry).once("value")).numChildren(), 7);
+    console.log("Inventario: 8 IDs, CRUD del propietario, aislamiento y validación; canal de comandos cerrado");
     console.log("RTDB/Auth: autenticación, permisos e historial físico sin duplicados; perfil, CRUD, metas y simulación compatibles entre dos sesiones");
   } finally {
     await env.cleanup();

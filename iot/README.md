@@ -76,3 +76,7 @@ Pruebas de Auth y Realtime Database con un proyecto de emulador:
 npm install --prefix iot/build/emulator firebase-tools @firebase/rules-unit-testing firebase
 node iot/build/emulator/node_modules/firebase-tools/lib/bin/firebase.js --config firebase.iot-emulator.json --project demo-voltify-iot emulators:exec --only auth,database 'node iot/tests/rtdb.test.cjs'
 ```
+
+## Identificación del montaje
+
+Consulta [Identificación del prototipo Voltify](COMPONENTES.md) y la plantilla [iotComponents.example.json](iotComponents.example.json) para aprovisionar el inventario lógico.

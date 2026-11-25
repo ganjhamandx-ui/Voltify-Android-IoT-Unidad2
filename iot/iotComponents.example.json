@@ -1,0 +1,102 @@
+{
+  "voltify-01-arduino-uno": {
+    "componentId": "voltify-01-arduino-uno",
+    "prototypeId": "voltify-01",
+    "kind": "MICROCONTROLLER",
+    "model": "Arduino Uno R3",
+    "connection": {
+      "bus": "UART",
+      "targetComponentId": "voltify-01-nodemcu",
+      "localPins": "TX=D3; RX=D2",
+      "targetPins": "RX=D2; TX=D1",
+      "baud": 9600
+    }
+  },
+  "voltify-01-nodemcu": {
+    "componentId": "voltify-01-nodemcu",
+    "prototypeId": "voltify-01",
+    "kind": "GATEWAY",
+    "model": "NodeMCU ESP8266EX",
+    "connection": {
+      "bus": "UART",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "RX=D2; TX=D1",
+      "targetPins": "TX=D3; RX=D2",
+      "baud": 9600
+    }
+  },
+  "voltify-01-ina219": {
+    "componentId": "voltify-01-ina219",
+    "prototypeId": "voltify-01",
+    "kind": "SENSOR",
+    "model": "INA219",
+    "connection": {
+      "bus": "I2C",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "SDA; SCL",
+      "targetPins": "SDA=A4; SCL=A5",
+      "address": 64
+    }
+  },
+  "voltify-01-lcd": {
+    "componentId": "voltify-01-lcd",
+    "prototypeId": "voltify-01",
+    "kind": "DISPLAY",
+    "model": "LCD I2C 16x2",
+    "connection": {
+      "bus": "I2C",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "SDA; SCL",
+      "targetPins": "SDA=A4; SCL=A5",
+      "address": 39
+    }
+  },
+  "voltify-01-led-verde": {
+    "componentId": "voltify-01-led-verde",
+    "prototypeId": "voltify-01",
+    "kind": "LED",
+    "model": "LED verde",
+    "connection": {
+      "bus": "GPIO",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "Anodo",
+      "targetPins": "D4"
+    }
+  },
+  "voltify-01-led-amarillo": {
+    "componentId": "voltify-01-led-amarillo",
+    "prototypeId": "voltify-01",
+    "kind": "LED",
+    "model": "LED amarillo",
+    "connection": {
+      "bus": "GPIO",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "Anodo",
+      "targetPins": "D5"
+    }
+  },
+  "voltify-01-led-rojo": {
+    "componentId": "voltify-01-led-rojo",
+    "prototypeId": "voltify-01",
+    "kind": "LED",
+    "model": "LED rojo",
+    "connection": {
+      "bus": "GPIO",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "Anodo",
+      "targetPins": "D6"
+    }
+  },
+  "voltify-01-buzzer": {
+    "componentId": "voltify-01-buzzer",
+    "prototypeId": "voltify-01",
+    "kind": "BUZZER",
+    "model": "Buzzer",
+    "connection": {
+      "bus": "GPIO",
+      "targetComponentId": "voltify-01-arduino-uno",
+      "localPins": "Entrada de control",
+      "targetPins": "D7"
+    }
+  }
+}

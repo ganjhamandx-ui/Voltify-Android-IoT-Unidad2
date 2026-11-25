@@ -111,6 +111,51 @@
             },
             ".write": "auth != null && auth.uid !== $uid && auth.token.firebase.sign_in_provider === 'password' && root.child('iotDeviceBindings').child(auth.uid).child('enabled').val() === true && root.child('iotDeviceBindings').child(auth.uid).child('ownerUid').val() === $uid && root.child('iotDeviceBindings').child(auth.uid).child('artifactKey').val() === $artifactKey && root.child('users').child($uid).child('artifacts').child($artifactKey).child('tipoFuente').val() === 'IOT_REAL' && root.child('users').child($uid).child('artifacts').child($artifactKey).child('activo').val() === true && root.child('users').child($uid).child('artifacts').child($artifactKey).child('monitoreando').val() === true && newData.exists() && newData.child('muestraMs').val() >= now - 10000 && newData.child('muestraMs').val() <= now + 2000 && (!data.exists() || newData.child('muestraMs').val() > data.child('muestraMs').val())"
           }
+        },
+        "iotComponents": {
+          "$componentId": {
+            ".write": "auth != null && auth.uid === $uid && !root.child('iotDeviceBindings').child(auth.uid).exists() && auth.token.email_verified === true",
+            ".validate": "newData.hasChildren(['componentId','prototypeId','kind','model','connection']) && $componentId.matches(/^[a-z0-9][a-z0-9-]{1,63}$/) && newData.child('componentId').val() === $componentId && (!data.exists() || newData.child('prototypeId').val() === data.child('prototypeId').val())",
+            "componentId": {
+              ".validate": "newData.isString()"
+            },
+            "prototypeId": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9][a-z0-9-]{1,47}$/)"
+            },
+            "kind": {
+              ".validate": "newData.val() === 'MICROCONTROLLER' || newData.val() === 'GATEWAY' || newData.val() === 'SENSOR' || newData.val() === 'DISPLAY' || newData.val() === 'LED' || newData.val() === 'BUZZER'"
+            },
+            "model": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+            },
+            "connection": {
+              ".validate": "newData.hasChildren(['bus','targetComponentId','localPins','targetPins']) && newData.child('targetComponentId').val() !== $componentId && ((newData.child('bus').val() === 'I2C' && newData.child('address').exists() && !newData.child('baud').exists()) || (newData.child('bus').val() === 'UART' && newData.child('baud').exists() && !newData.child('address').exists()) || (newData.child('bus').val() === 'GPIO' && !newData.child('baud').exists() && !newData.child('address').exists()))",
+              "bus": {
+                ".validate": "newData.val() === 'I2C' || newData.val() === 'UART' || newData.val() === 'GPIO'"
+              },
+              "targetComponentId": {
+                ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9][a-z0-9-]{1,63}$/)"
+              },
+              "localPins": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
+              },
+              "targetPins": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
+              },
+              "address": {
+                ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 8 && newData.val() <= 119"
+              },
+              "baud": {
+                ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 300 && newData.val() <= 115200"
+              },
+              "$other": {
+                ".validate": false
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     },
