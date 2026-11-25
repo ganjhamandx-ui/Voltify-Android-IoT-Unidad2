@@ -15,6 +15,7 @@
 #endif
 
 namespace {
+constexpr char DeviceUid[] = "voltify-01-nodemcu";
 constexpr char Database[] = "https://voltify-e51f9-default-rtdb.firebaseio.com";
 constexpr uint32_t HttpTimeoutMs = 4500;
 SoftwareSerial uart;
@@ -143,7 +144,7 @@ bool authenticate() {
   if (!http.begin(tls, url)) return false;
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   const int status = http.POST("grant_type=refresh_token&refresh_token=" + formEncode(refreshToken));
-  Serial.printf("Auth anonima HTTP %d\n", status);
+  Serial.printf("Renovacion Firebase HTTP %d\n", status);
   if (status != 200) {
     http.end();
     return false;
@@ -169,7 +170,7 @@ bool authenticate() {
   const char* renewal = response[refreshKey] | "";
   const char* uid = response[uidKey] | "";
   const unsigned long seconds = strtoul(response[expiryKey] | "", nullptr, 10);
-  if (strcmp(uid, DEVICE_UID) != 0 || !*token || strlen(token) > 4096 ||
+  if (strcmp(uid, DeviceUid) != 0 || !*token || strlen(token) > 4096 ||
       !*renewal || strlen(renewal) > 2048 || seconds < 120 || seconds > 86400) {
     Serial.println(F("Auth: identidad o respuesta invalida"));
     return false;
@@ -242,7 +243,7 @@ bool writeAck(const char* id, const char* state) {
   JsonDocument ack;
   ack["id"] = id;
   ack["state"] = state;
-  ack["deviceUid"] = DEVICE_UID;
+  ack["deviceUid"] = DeviceUid;
   String body;
   serializeJson(ack, body);
   const int status = databaseHttp.PUT(body);
@@ -379,8 +380,8 @@ void setup() {
   char* end = nullptr;
   const long artifactId = strtol(ARTIFACT_KEY, &end, 10);
   provisioned = *WIFI_SSID && safeKey(FIREBASE_API_KEY) && *DEVICE_REFRESH_TOKEN &&
-      strlen(DEVICE_REFRESH_TOKEN) <= 2048 && safeKey(DEVICE_UID) && safeKey(OWNER_UID) &&
-      strcmp(DEVICE_UID, OWNER_UID) != 0 && artifactId > 0 && !*end &&
+      strlen(DEVICE_REFRESH_TOKEN) <= 2048 && safeKey(OWNER_UID) &&
+      strcmp(DeviceUid, OWNER_UID) != 0 && artifactId > 0 && !*end &&
       ARTIFACT_KEY[0] >= '1' && ARTIFACT_KEY[0] <= '9' &&
       DEVICE_SLOT >= 0 && DEVICE_SLOT < Voltify::Slots;
   if (!provisioned) {

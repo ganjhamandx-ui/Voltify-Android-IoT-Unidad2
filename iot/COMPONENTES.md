@@ -19,7 +19,7 @@ Los pines y direcciones describen los sketches de revisión. Las direcciones I²
 
 - `componentId` identifica un componente físico de forma lógica. `prototypeId` agrupa esos componentes; ambos quedan persistidos en el inventario.
 - `ownerUid` es el UID de Firebase Authentication del propietario y delimita su espacio de datos.
-- `deviceUid` es el UID de la única cuenta dedicada al gateway. `/iotDeviceBindings/{deviceUid}` autoriza al NodeMCU para un propietario y un artefacto concretos. Al aprovisionar, registra también `gatewayComponentId: "voltify-01-nodemcu"` en esa vinculación como referencia administrativa. Los permisos de telemetría siguen evaluando `enabled`, `ownerUid`, `artifactKey` y, para el historial, `slot`.
+- `deviceUid` es el UID fijo `voltify-01-nodemcu` de la sesión del gateway con Firebase Custom Authentication. Este mismo valor se usa como ID del componente y requiere un token autenticado para autorizar acceso. `/iotDeviceBindings/{deviceUid}` autoriza al NodeMCU para un propietario y un artefacto concretos. Al aprovisionar, registra también `gatewayComponentId: "voltify-01-nodemcu"` en esa vinculación como referencia administrativa. Los permisos de telemetría evalúan el proveedor `custom`, `minAuthTime`, `enabled`, `ownerUid`, `artifactKey` y, para el historial, `slot`.
 - `artifactKey` referencia el registro existente de `users/{ownerUid}/artifacts/{artifactKey}`. Su `id` numérico identifica el artefacto monitoreado en los consumos. La vinculación del gateway asocia el montaje con ese artefacto.
 - `0x40` y `0x27` son direcciones de bus I²C. Otros montajes pueden usar las mismas direcciones.
 

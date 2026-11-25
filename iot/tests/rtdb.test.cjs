@@ -5,6 +5,8 @@ const path = require("node:path");
 
 const load = createRequire(path.resolve(__dirname, "../build/emulator/package.json"));
 const { assertSucceeds, initializeTestEnvironment } = load("@firebase/rules-unit-testing");
+const { generateKeyPairSync, verify } = require("node:crypto");
+const { deviceUid, exchangeCustomToken, loadAdmin } = require("../tools/provision-device.cjs");
 const projectId = "demo-voltify-iot";
 const epoch = 1767225600000;
 const rules = fs.readFileSync(path.resolve(__dirname, "../../firebase_database_rules.json"), "utf8");
@@ -21,23 +23,61 @@ async function main() {
       assert.equal(response.status, 200);
       return response.json();
     }
-    const { idToken, refreshToken, localId } = await anonymous();
-    const unbound = await anonymous();
-    const refreshed = await fetch("http://127.0.0.1:9099/securetoken.googleapis.com/v1/token?key=fake", {
-      method: "POST",
-      body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken })
+    // El emulador no verifica la firma: validarla aquí con una clave RSA efímera.
+    const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const { cert, initializeApp, deleteApp } = loadAdmin("firebase-admin/app");
+    const { getAuth } = loadAdmin("firebase-admin/auth");
+    const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    const app = initializeApp({
+      projectId,
+      credential: cert({
+        projectId,
+        clientEmail: "local-test@demo-voltify-iot.iam.gserviceaccount.com",
+        privateKey: privateKey.export({ type: "pkcs8", format: "pem" })
+      })
     });
-    assert.equal(refreshed.status, 200);
-    const token = (await refreshed.json()).id_token;
+    const endpoint = "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=fake";
+    let session, otherSession;
+    try {
+      const signed = await getAuth(app).createCustomToken(deviceUid);
+      const [header, body, signature] = signed.split(".");
+      assert.equal(JSON.parse(Buffer.from(header, "base64url")).alg, "RS256");
+      assert.ok(verify("RSA-SHA256", Buffer.from(header + "." + body),
+                       publicKey, Buffer.from(signature, "base64url")));
+      assert.equal(JSON.parse(Buffer.from(body, "base64url")).uid, deviceUid);
+      session = await exchangeCustomToken(endpoint, signed, deviceUid, projectId);
+      otherSession = await exchangeCustomToken(endpoint, await getAuth(app).createCustomToken("gateway-ajeno"), "gateway-ajeno", projectId);
+    } finally {
+      await deleteApp(app);
+      if (emulatorHost !== undefined) process.env.FIREBASE_AUTH_EMULATOR_HOST = emulatorHost;
+    }
+    const { deviceUid: localId, refreshToken, minAuthTime } = session;
+    const unbound = await anonymous();
+    async function refresh(credential) {
+      const response = await fetch("http://127.0.0.1:9099/securetoken.googleapis.com/v1/token?key=fake", {
+        method: "POST",
+        body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: credential })
+      });
+      assert.equal(response.status, 200);
+      return response.json();
+    }
+    const { id_token: token } = await refresh(refreshToken);
+    const renewed = JSON.parse(Buffer.from(token.split(".")[1], "base64url"));
+    assert.equal(renewed.auth_time, minAuthTime);
+    assert.equal(renewed.firebase.sign_in_provider, "custom");
+    assert.equal(renewed.sub, localId);
+    const { id_token: idToken } = await refresh(refreshToken); // Arranque nuevo con el token aprovisionado.
+    const { id_token: otherToken } = await refresh(otherSession.refreshToken);
 
     const artifact = {
       id: 42, nombre: "Prueba INA219", categoria: "Otro", marca: "", modelo: "",
       potenciaW: 1, activo: true, monitoreando: true, fechaRegistro: 1, tipoFuente: "IOT_REAL"
     };
-    const binding = { enabled: true, ownerUid: "owner", gatewayComponentId: "voltify-01-nodemcu", artifactKey: "42", slot: 0 };
+    const binding = { enabled: true, ownerUid: "owner", gatewayComponentId: "voltify-01-nodemcu", artifactKey: "42", slot: 0, minAuthTime };
     const seed = (ref, value) => env.withSecurityRulesDisabled(context => context.database().ref(ref).set(value));
     await seed("/", {
-      iotDeviceBindings: { [localId]: binding },
+      iotDeviceBindings: { [localId]: binding, [unbound.localId]: binding, "gateway-ajeno": binding },
       users: { owner: { artifacts: { 42: artifact, 43: { ...artifact, id: 43 } } } }
     });
 
@@ -77,6 +117,11 @@ async function main() {
     const firstLive = { ...row.telemetria, muestraMs: now - 2000 };
     const nextLive = { ...row.telemetria, potenciaW: 0.9 };
     await denied(await put(liveKey, firstLive, ""));
+    await denied(await put(liveKey, firstLive, otherToken));
+    await denied(await put(liveKey, firstLive, unbound.idToken));
+    await seed("iotDeviceBindings/" + localId + "/minAuthTime", minAuthTime + 1);
+    await denied(await put(liveKey, firstLive));
+    await seed("iotDeviceBindings/" + localId + "/minAuthTime", minAuthTime);
     await denied(await put(liveKey.replace("owner", "other"), firstLive));
     await denied(await put("users/owner/iotLive/43", firstLive));
     await denied(await put(liveKey, { ...firstLive, muestraMs: now - 11000 }));
@@ -223,6 +268,7 @@ async function main() {
     await assert.rejects(pending.set({ ...order, id: "a".repeat(32) }));
     assert.deepEqual(await (await fetch(url(mailbox))).json(), order);
     await denied(await fetch(url(mailbox, unbound.idToken)));
+    await denied(await fetch(url(mailbox, otherToken)));
     await denied(await fetch(url("users/owner/iotCommands")));
     await denied(await fetch(url(mailbox.replace("42", "43"))));
     await denied(await put(mailbox, order));
@@ -247,7 +293,7 @@ async function main() {
     const registry = "users/owner/iotComponents";
     const ownerFs = env.authenticatedContext("owner", { email_verified: true }).firestore();
     const foreignFs = env.authenticatedContext("other", { email_verified: true }).firestore();
-    const gatewayFs = env.authenticatedContext(localId, { firebase: { sign_in_provider: "anonymous" } }).firestore();
+    const gatewayFs = env.authenticatedContext(localId, { firebase: { sign_in_provider: "custom" } }).firestore();
     assert.equal(Object.keys(manifest).length, 8);
     for (const [id, component] of Object.entries(manifest)) {
       await assertSucceeds(ownerFs.doc(registry + "/" + id).set(component));
@@ -262,7 +308,7 @@ async function main() {
     await assert.rejects(owner.ref(uno).set(manifest["voltify-01-arduino-uno"]));
     await assertSucceeds(ownerFs.doc(uno).delete());
     console.log("Firestore: ocho IDs, esquema, CRUD e aislamiento verificados; inventario RTDB cerrado");
-    console.log("RTDB/Auth: autenticación, permisos e historial físico sin duplicados; perfil, CRUD, metas y simulación compatibles entre dos sesiones");
+    console.log("RTDB/Auth: firma RS256, intercambio Custom Token, renovación, permisos e historial físico sin duplicados; perfil, CRUD, metas y simulación compatibles entre dos sesiones");
   } finally {
     await env.cleanup();
   }

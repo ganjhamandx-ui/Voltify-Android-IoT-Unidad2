@@ -3,8 +3,7 @@
 constexpr char WIFI_SSID[] = "";
 constexpr char WIFI_PASSWORD[] = "";
 constexpr char FIREBASE_API_KEY[] = "";
-constexpr char DEVICE_REFRESH_TOKEN[] = ""; // Credencial anónima aprovisionada fuera del repositorio
-constexpr char DEVICE_UID[] = "";
+constexpr char DEVICE_REFRESH_TOKEN[] = ""; // Sesión personalizada aprovisionada fuera del repositorio
 constexpr char OWNER_UID[] = "";
 constexpr char ARTIFACT_KEY[] = "123456789"; // ID decimal en RTDB
 constexpr int DEVICE_SLOT = 0; // Único por propietario; no reutilizar
