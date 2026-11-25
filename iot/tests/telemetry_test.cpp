@@ -53,7 +53,8 @@ int main() {
   assert(decoded["tipoFuente"].as<std::string>() == "IOT_REAL");
   assert(decoded["telemetria"]["muestraMs"].as<int64_t>() == (Epoch + 25) * 1000);
   assert(decoded["telemetria"]["corrienteMa"].as<double>() == 90);
-  assert(decoded["telemetria"]["energiaTotalKwh"].as<double>() == 0.001);
+  assert(fabs(decoded["telemetria"]["energiaTotalKwh"].as<double>() - 0.001) < 1e-9);
+  assert(fabs(decoded["consumoKwh"].as<double>() - 0.000002) < 1e-9);
 
   readings.accept(input, Epoch + 29, 29000);  // Un ajuste de reloj no reabre el bloque.
   readings.closeBucket(Epoch + 116);
